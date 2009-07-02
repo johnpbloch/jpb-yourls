@@ -20,6 +20,10 @@ Note that, for maximum fun, this plugin also supports a few other public URL sho
 1. title helper: counts the number of characters to keep under the 140 limit
 1. on the Write screen, you can (re)generate short URLs and (re)promote posts on Twitter
 
+== Changelog ==
+
+See plugin source
+
 == Installation ==
 
 Installation is, as usual :

@@ -84,6 +84,10 @@ function wp_ozh_yourls_send_tweet( $tweet ) {
 
 // The WP <-> YOURLS bridge function: get short URL of a WP post. Returns string(url)
 function wp_ozh_yourls_get_new_short_url( $url, $post_id = 0 ) {
+	// Init plugin (redundant when in admin, needed when plugin called from public part, for instance triggered by a template tag)
+	global $wp_ozh_yourls;
+	if (!$wp_ozh_yourls)
+		wp_ozh_yourls_admin_init();
 	// Get short URL
 	$shorturl = wp_ozh_yourls_api_call( wp_ozh_yourls_service(), $url);
 
