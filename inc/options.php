@@ -2,13 +2,14 @@
 
 // Add page to menu
 function wp_ozh_yourls_add_page() {
-	$page = add_options_page('YOURLS: WordPress to Twitter', 'YOURLS', 'manage_options', 'ozh_yourls', 'wp_ozh_yourls_do_page');
 	// Loading CSS & JS *only* where needed. Do it this way too, goddamnit.
+	$page = add_options_page('YOURLS: WordPress to Twitter', 'YOURLS', 'manage_options', 'ozh_yourls', 'wp_ozh_yourls_do_page');
 	add_action("load-$page", 'wp_ozh_yourls_add_css_js_plugin');
+	// Add the JS & CSS for the char counter. This is too early to check wp_ozh_yourls_generate_on('post') or ('page')
 	add_action('load-post.php', 'wp_ozh_yourls_add_css_js_post');
+	add_action('load-post-new.php', 'wp_ozh_yourls_add_css_js_post');
 	add_action('load-page.php', 'wp_ozh_yourls_add_css_js_post');
 	add_action('load-page-new.php', 'wp_ozh_yourls_add_css_js_post');
-	add_action('load-post-new.php', 'wp_ozh_yourls_add_css_js_post');
 }
 
 // Add style & JS on the plugin page
@@ -20,9 +21,13 @@ function wp_ozh_yourls_add_css_js_plugin() {
 
 // Add style & JS on the Post/Page Edit page
 function wp_ozh_yourls_add_css_js_post() {
-	$plugin_url = WP_PLUGIN_URL.'/'.plugin_basename( dirname(dirname(__FILE__)) );
-	wp_enqueue_script('yourls_js', $plugin_url.'/res/post.js');
-	wp_enqueue_style('yourls_css', $plugin_url.'/res/post.css');
+	global $pagenow;
+	$current = str_replace( array('-new.php', '.php'), '', $pagenow);
+	if ( wp_ozh_yourls_generate_on($current) ) {
+		$plugin_url = WP_PLUGIN_URL.'/'.plugin_basename( dirname(dirname(__FILE__)) );
+		wp_enqueue_script('yourls_js', $plugin_url.'/res/post.js');
+		wp_enqueue_style('yourls_css', $plugin_url.'/res/post.css');
+	}
 }
 
 // Sanitize & validate options that are submitted
@@ -111,6 +116,7 @@ function wp_ozh_yourls_do_page() {
 		<select name="ozh_yourls[other]" id="y_other" class="y_toggle">
 		<option value="" <?php selected( '', $ozh_yourls['other'] ); ?> >Please select...</option>
 		<option value="trim" <?php selected( 'trim', $ozh_yourls['other'] ); ?> >tr.im</option>
+		<!--<option value="pingfm" <?php selected( 'pingfm', $ozh_yourls['other'] ); ?> >ping.fm</option>-->
 		<option value="bitly" <?php selected( 'bitly', $ozh_yourls['other'] ); ?> >bit.ly</option>
 		<option value="tinyurl" <?php selected( 'tinyurl', $ozh_yourls['other'] ); ?> >tinyURL</option>
 		<option value="isgd" <?php selected( 'isgd', $ozh_yourls['other'] ); ?> >is.gd</option>
@@ -128,6 +134,12 @@ function wp_ozh_yourls_do_page() {
 			<label for="y_api_trim_login">Username</label> <input type="text" id="y_api_trim_login" name="ozh_yourls[trim_login]" value="<?php echo $ozh_yourls['trim_login']; ?>"/><br/>
 			<label for="y_api_trim_pass">Password</label> <input type="password" id="y_api_trim_pass" name="ozh_yourls[trim_password]" value="<?php echo $ozh_yourls['trim_password']; ?>"/><br/>
 			<em>If you have a <a href="http://tr.im/">tr.im</a> account, entering your credentials will link the short URLs to it</em>
+		</div>
+		
+		<?php $hidden = ( $ozh_yourls['other'] == 'pingfm' ? '' : 'y_hidden' ) ; ?>
+		<div id="y_show_pingfm" class="<?php echo $hidden; ?> y_other y_level3">
+			<label for="y_api_pingfm_user_app_key">Web Key</label> <input type="text" id="y_api_pingfm_user_app_key" name="ozh_yourls[pingfm_user_app_key]" value="<?php echo $ozh_yourls['pingfm_user_app_key']; ?>"/><br/>
+			<em>If you have a <a href="http://ping.fm/">ping.fm</a> account, enter your private <a href="http://ping.fm/key/">Web Key</a></em>
 		</div>
 		
 		<?php $hidden = ( $ozh_yourls['other'] == 'tinyurl' ? '' : 'y_hidden' ) ; ?>
@@ -228,8 +240,10 @@ function wp_ozh_yourls_do_page() {
 // Add meta boxes to post & page edit
 function wp_ozh_yourls_addbox() {
 	// add_meta_box($id, $title, $callback, $page, $context = 'advanced', $priority = 'default')
-	add_meta_box('yourlsdiv', 'Short URL &amp; Tweet', 'wp_ozh_yourls_drawbox', 'post', 'side', 'default');
-	add_meta_box('yourlsdiv', 'Short URL &amp; Tweet', 'wp_ozh_yourls_drawbox', 'page', 'side', 'default');
+	if ( wp_ozh_yourls_generate_on('post') )
+		add_meta_box('yourlsdiv', 'Short URL &amp; Tweet', 'wp_ozh_yourls_drawbox', 'post', 'side', 'default');
+	if ( wp_ozh_yourls_generate_on('page') )
+		add_meta_box('yourlsdiv', 'Short URL &amp; Tweet', 'wp_ozh_yourls_drawbox', 'page', 'side', 'default');
 }
 
 // Draw meta box
@@ -242,7 +256,7 @@ function wp_ozh_yourls_drawbox($post) {
 	if ($type != 'post' && $type !='page')
 		return; // Not sure this can actually happen since add_meta_box() should take care of this. Just in case.
 	
-	// Too soon, young Padawan
+	// Too early, young Padawan
 	if ($status != 'publish') {
 		echo '<p>When you publish this post, you will be able here to (re)promote it via Twitter.</p>
 		<p>Depending on <a href="options-general.php?page=ozh_yourls">configuration</a>, this also happens automagically when you press "Publish" of course :)</p>';
@@ -385,6 +399,9 @@ function wp_ozh_yourls_drawbox($post) {
 				yourls.reset();
 				e.preventDefault();
 			});
+			
+			$('#edit-slug-box').append('<span id="yourls-shorturl-button"><a onclick="prompt(\'Short URL:\', \'<?php echo $shorturl; ?>\'); return false;" class="button" href="#">Get Short URL</a></span>');
+			$('#yourls-shorturl-button a').css('border-color','#bbf');
 		})
 
 	})(jQuery);
@@ -393,3 +410,5 @@ function wp_ozh_yourls_drawbox($post) {
 
 	<?php
 }
+
+?>

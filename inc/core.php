@@ -138,7 +138,21 @@ function wp_ozh_yourls_api_call( $api, $url) {
 			if ($json)
 				$shorturl = $json->url;
 			break;
-			
+		
+		case 'pingfm':
+			$api_url = 'http://api.ping.fm/v1/url.create';
+			$body = array(
+				'api_key' => 'd0e1aad9057142126728c3dcc03d7edb',
+				'user_app_key' => $wp_ozh_yourls['pingfm_user_app_key'],
+				'long_url' => $url
+			);
+			$xml = wp_ozh_yourls_fetch_url( $api_url, 'POST', $body );
+			if ($xml) {
+				preg_match_all('!<short_url>[^<]+</short_url>!', $xml, $matches);
+				$shorturl = $matches[0][0];				
+			}
+			break;
+		
 		case 'tinyurl':
 			$api_url = sprintf( 'http://tinyurl.com/api-create.php?url=%s', urlencode($url) );
 			$shorturl = wp_ozh_yourls_remote_simple( $api_url );
@@ -168,7 +182,8 @@ function wp_ozh_yourls_remote_simple( $url ) {
 // Poke a remote API with JSON and return a object (decoded JSON) or NULL if error
 function wp_ozh_yourls_remote_json( $url ) {
 	$input = wp_ozh_yourls_fetch_url( $url );
-	require_once(dirname(__FILE__).'/pear_json.php');
+	if ( !class_exists( 'Services_JSON' ) )
+		require_once(dirname(__FILE__).'/pear_json.php');
 	$json = new Services_JSON();
 	$obj = $json->decode($input);
 	return $obj;
@@ -177,15 +192,15 @@ function wp_ozh_yourls_remote_json( $url ) {
 
 
 // Fetch a remote page. Input url, return content
-function wp_ozh_yourls_fetch_url( $url ) {
+function wp_ozh_yourls_fetch_url( $url, $method='GET', $body=array(), $headers=array() ) {
 	$request = new WP_Http;
-	$result = $request->request( $url , array('method'=>'GET') );
+	$result = $request->request( $url , array( 'method'=>$method, 'body'=>$body, 'headers'=>$headers ) );
 
 	// Success?
 	if ( !is_wp_error($result) && isset($result['body']) ) {
 		return $result['body'];
 
-	// Failure (server problem...) or other problem (bad password...)
+	// Failure (server problem...)
 	} else {
 		// TODO: something more useful ?
 		return false;

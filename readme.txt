@@ -1,6 +1,6 @@
 === YOURLS: WordPress to Twitter ===
 Donate link: http://planetozh.com/exit/donate
-Tags: ozh, gamerz, twitter, tinyurl, trim, tr.im, isgd, is.gd, bitly, bit.ly, yourls, short url
+Tags: ozh, gamerz, twitter, tinyurl, trim, tr.im, isgd, is.gd, bitly, bit.ly, pingfm, ping.fm, yourls, short url
 Requires at least: 2.8
 Tested up to: 9.9
 Stable tag: trunk
@@ -22,7 +22,7 @@ Note that, for maximum fun, this plugin also supports a few other public URL sho
 
 == Changelog ==
 
-See plugin source
+See plugin source or check the [SVN commit changelog](http://plugins.trac.wordpress.org/log/yourls-wordpress-to-twitter?verbose=on)
 
 == Installation ==
 

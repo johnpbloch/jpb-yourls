@@ -3,25 +3,13 @@
 // Send a message to Twitter. Returns boolean for success or failure.
 function wp_ozh_yourls_tweet_it($username, $password, $message){
 
-    $host = "http://twitter.com/statuses/update.xml?status=".urlencode(stripslashes(urldecode($message)));
-
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $host);
-    curl_setopt($ch, CURLOPT_VERBOSE, 1);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_USERPWD, "$username:$password");
-    curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-    curl_setopt($ch, CURLOPT_POST, 1);
-
-    // Go for it!!!
-    $result = curl_exec($ch);
-    // Look at the returned header
-    $resultArray = curl_getinfo($ch);
-
-    // close curl
-    curl_close($ch);
-
-    //echo "http code: ".$resultArray['http_code']."<br />";
-	return ($resultArray['http_code'] == "200");
-
+    $api_url = 'http://twitter.com/statuses/update.xml';
+	
+	$body =    array( 'status'=>$message );
+	$headers = array( 'Authorization' => 'Basic '.base64_encode("$username:$password") );
+	
+	$result = wp_ozh_yourls_fetch_url( $api_url, 'POST', $body, $headers );
+	
+	// Basic check for success or failure: if body contains <error>some string</error>, not good
+	return ( preg_match_all('!<error>[^<]+</error>!', $result, $matches) !== 1 );
 }
