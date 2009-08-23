@@ -5,7 +5,7 @@ Plugin URI: http://planetozh.com/blog/my-projects/yourls-wordpress-to-twitter-a-
 Description: Create short URLs for posts with <a href="http://yourls.org/" title="Your Own URL Shortener">YOURLS</a> (or other services such as tr.im) and tweet them.
 Author: Ozh
 Author URI: http://planetozh.com/
-Version: 1.2
+Version: 1.2.1
 */
 
 /* Release History :
@@ -18,6 +18,7 @@ Version: 1.2
 			  Improved: using internal WP_Http class instead of cURL for posting to Twitter
 			  Fixed: short URLs generated on pages or posts even if option unchecked in settings (thanks Viper007Bond for noticing)
 			  Fixed: PEAR class was included without checking existence first, conflicting with Twitter Tools for instance (thanks Doug Stewart for noticing)
+ * 1.2.1:     Fixed: oops, forgot to remove a test hook
  */
 
 
@@ -42,10 +43,6 @@ if (is_admin()) {   // TODO: optimize? unneeded loadings depending on pages
 	// Custom icon & plugin action link
 	add_filter( 'plugin_action_links_'.plugin_basename(__FILE__), 'wp_ozh_yourls_plugin_actions', -10);
 	add_filter( 'ozh_adminmenu_icon_ozh_yourls', 'wp_ozh_yourls_customicon' );
-	// Dashboard widget
-	add_action('wp_dashboard_setup', 'wp_ozh_yourls_add_dashboard_widgets' );
-
-	
 }
 
 // Get or create the short URL for a post. Input integer (post id), output string(url)
