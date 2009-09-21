@@ -48,6 +48,9 @@ function wp_ozh_yourls_reset_url() {
 // Function called when new post. Expecting post object.
 function wp_ozh_yourls_newpost( $post ) {
 	global $wp_ozh_yourls;
+	if (!$wp_ozh_yourls)
+		wp_ozh_yourls_admin_init();
+	
 	$post_id = $post->ID;
 	$url = get_permalink( $post_id );
 	
@@ -88,8 +91,14 @@ function wp_ozh_yourls_get_new_short_url( $url, $post_id = 0 ) {
 	global $wp_ozh_yourls;
 	if (!$wp_ozh_yourls)
 		wp_ozh_yourls_admin_init();
+
+	// Check plugin is configured
+	$service = wp_ozh_yourls_service();
+	if( !$service )
+		return 'Plugin not configured: cannot find which URL shortening service to use';
+
 	// Get short URL
-	$shorturl = wp_ozh_yourls_api_call( wp_ozh_yourls_service(), $url);
+	$shorturl = wp_ozh_yourls_api_call( $service, $url);
 
 	// Store short URL in a custom field
 	if ($post_id && $shorturl)
@@ -118,7 +127,7 @@ function wp_ozh_yourls_api_call( $api, $url) {
 		case 'yourls-remote':
 			$api_url = sprintf( $wp_ozh_yourls['yourls_url'] . '?username=%s&password=%s&url=%s&format=json&action=shorturl',
 				$wp_ozh_yourls['yourls_login'], $wp_ozh_yourls['yourls_password'], urlencode($url) );
-			$json = wp_ozh_yourls_remote_json( $api_url );
+			$json = wp_ozh_yourls_remote_json( $api_url );			
 			if ($json)
 				$shorturl = $json->shorturl;
 			break;
@@ -194,7 +203,7 @@ function wp_ozh_yourls_remote_json( $url ) {
 // Fetch a remote page. Input url, return content
 function wp_ozh_yourls_fetch_url( $url, $method='GET', $body=array(), $headers=array() ) {
 	$request = new WP_Http;
-	$result = $request->request( $url , array( 'method'=>$method, 'body'=>$body, 'headers'=>$headers ) );
+	$result = $request->request( $url , array( 'method'=>$method, 'body'=>$body, 'headers'=>$headers, 'user-agent'=>'YOURLS http://yourls.org/' ) );
 
 	// Success?
 	if ( !is_wp_error($result) && isset($result['body']) ) {

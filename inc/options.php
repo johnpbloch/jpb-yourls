@@ -214,7 +214,7 @@ function wp_ozh_yourls_do_page() {
 	Examples (click one to copy)<br/>
 	<ul id="tw_msg_sample">
 		<li><code class="tw_msg_sample">Fresh on <?php bloginfo();?>: %T %U</code></li>
-		<li><code class="tw_msg_sample">On the blog: %T (%U)</code></li>
+		<li><code class="tw_msg_sample">From the blog: %T %U</code></li>
 		<li><code class="tw_msg_sample">%T - %U</code></li>
 	</ul>
 	<em>Tip: Keep the tweet message template short!</em>
