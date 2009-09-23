@@ -5,7 +5,7 @@ Plugin URI: http://planetozh.com/blog/my-projects/yourls-wordpress-to-twitter-a-
 Description: Create short URLs for posts with <a href="http://yourls.org/" title="Your Own URL Shortener">YOURLS</a> (or other services such as tr.im) and tweet them.
 Author: Ozh
 Author URI: http://planetozh.com/
-Version: 1.3
+Version: 1.3.1
 */
 
 /* Release History :
@@ -21,6 +21,7 @@ Version: 1.3
  * 1.2.1:     Fixed: oops, forgot to remove a test hook
  * 1.3:       Fixed: Don't generate short URLs on preview pages
               Fixed: Tweet when posting scheduled post or using the XMLRPC API
+ * 1.3.1:     Added: option to add <link> in <real>
  */
 
 
@@ -73,7 +74,6 @@ if (is_admin()) {
 	require_once(dirname(__FILE__).'/inc/options.php');
 	// Add menu page, init options, add box on the Post/Edit interface
 	add_action('admin_menu', 'wp_ozh_yourls_add_page');
-	add_action('admin_init', 'wp_ozh_yourls_admin_init', 1 );
 	add_action('admin_init', 'wp_ozh_yourls_addbox', 10);
 	// Handle AJAX requests
 	add_action('wp_ajax_yourls-promote', 'wp_ozh_yourls_promote' );
@@ -81,6 +81,13 @@ if (is_admin()) {
 	// Custom icon & plugin action link
 	add_filter( 'plugin_action_links_'.plugin_basename(__FILE__), 'wp_ozh_yourls_plugin_actions', -10);
 	add_filter( 'ozh_adminmenu_icon_ozh_yourls', 'wp_ozh_yourls_customicon' );
+	// Init plugin
+	add_action('admin_init', 'wp_ozh_yourls_init', 1 );
+} else {
+	// Add <link> in <head> if applicable
+	add_action('wp_head', 'wp_ozh_yourls_add_head_link');
+	// Init plugin
+	add_action('init', 'wp_ozh_yourls_init', 1 );
 }
 
 // Handle new stuff published

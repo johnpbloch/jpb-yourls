@@ -1,5 +1,16 @@
 <?php
 
+// Add <link> in <head> if applicable
+function wp_ozh_yourls_add_head_link() {
+	global $wp_ozh_yourls;
+	if(
+		( is_single() && $wp_ozh_yourls['link_on_post'] ) ||
+		( is_page() && $wp_ozh_yourls['link_on_page'] )
+	) {
+		wp_ozh_yourls_head_linkrel();
+	}
+}
+
 // Manual tweet from the Edit interface
 function wp_ozh_yourls_promote() {
 	check_ajax_referer( 'yourls' );
@@ -48,8 +59,6 @@ function wp_ozh_yourls_reset_url() {
 // Function called when new post. Expecting post object.
 function wp_ozh_yourls_newpost( $post ) {
 	global $wp_ozh_yourls;
-	if (!$wp_ozh_yourls)
-		wp_ozh_yourls_admin_init();
 	
 	$post_id = $post->ID;
 	$url = get_permalink( $post_id );
@@ -87,10 +96,7 @@ function wp_ozh_yourls_send_tweet( $tweet ) {
 
 // The WP <-> YOURLS bridge function: get short URL of a WP post. Returns string(url)
 function wp_ozh_yourls_get_new_short_url( $url, $post_id = 0 ) {
-	// Init plugin (redundant when in admin, needed when plugin called from public part, for instance triggered by a template tag)
 	global $wp_ozh_yourls;
-	if (!$wp_ozh_yourls)
-		wp_ozh_yourls_admin_init();
 
 	// Check plugin is configured
 	$service = wp_ozh_yourls_service();
@@ -233,7 +239,7 @@ function wp_ozh_yourls_maketweet( $url, $title ) {
 }
 
 // Init plugin options
-function wp_ozh_yourls_admin_init(){
+function wp_ozh_yourls_init(){
 	global $wp_ozh_yourls;
 	if (function_exists('register_setting')) // testing for the function existence in case we're initting out of of the admin scope
 		register_setting( 'wp_ozh_yourls_options', 'ozh_yourls', 'wp_ozh_yourls_sanitize' );

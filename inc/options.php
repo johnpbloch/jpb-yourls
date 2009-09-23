@@ -223,6 +223,29 @@ function wp_ozh_yourls_do_page() {
 	</tr>
 
 	</table>
+	
+	<h3>Short URL auto-discovery</h3>
+	
+	<p>Add a <code>&lt;link></code> in the <code>&lt;head></code> (more info: <a href="http://microformats.org/wiki/rel-shortlink">microformats.org</a>, <a href="http://wiki.snaplog.com/short_url">short url discovery</a>)</p>
+	
+	<table class="form-table">
+
+	<tr valign="top">
+	<th scope="row">On individual posts</th>
+	<td>
+	<input id="link_on_post" name="ozh_yourls[link_on_post]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['link_on_post'] ); ?> /><label for="link_on_post"> </label><br/>
+	</td>
+	</tr>
+
+	<tr valign="top">
+	<th scope="row">On individual pages</th>
+	<td>
+	<input id="link_on_page" name="ozh_yourls[link_on_page]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['link_on_page'] ); ?> /><label for="link_on_page"> </label><br/>
+	</td>
+	</tr>
+
+	</table>
+	
 
 
 	<p class="submit">
