@@ -123,9 +123,17 @@ function wp_ozh_yourls_api_call( $api, $url) {
 
 		case 'yourls-local':
 			global $yourls_reserved_URL;
-			require_once($wp_ozh_yourls['yourls_path']);
-			$yourls_db = new wpdb(YOURLS_DB_USER, YOURLS_DB_PASS, YOURLS_DB_NAME, YOURLS_DB_HOST);
-			$yourls_result = yourls_add_new_link($url, '', $yourls_db);
+			define('YOURLS_INSTALLING', true); // Pretend we're installing YOURLS to bypass test for install or upgrade need
+			define('YOURLS_FLOOD_DELAY_SECONDS', 0); // Disable flood check
+			if( file_exists( dirname($wp_ozh_yourls['yourls_path']).'/load-yourls.php' ) ) { // YOURLS 1.4
+				global $ydb;
+				require_once( dirname($wp_ozh_yourls['yourls_path']).'/load-yourls.php' ); 
+				$yourls_result = yourls_add_new_link($url, '');
+			} else { // YOURLS 1.3
+				require_once($wp_ozh_yourls['yourls_path']); 
+				$yourls_db = new wpdb(YOURLS_DB_USER, YOURLS_DB_PASS, YOURLS_DB_NAME, YOURLS_DB_HOST);
+				$yourls_result = yourls_add_new_link($url, '', $yourls_db);
+			}
 			if ($yourls_result)
 				$shorturl = $yourls_result['shorturl'];
 			break;

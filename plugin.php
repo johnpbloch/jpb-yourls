@@ -5,7 +5,7 @@ Plugin URI: http://planetozh.com/blog/my-projects/yourls-wordpress-to-twitter-a-
 Description: Create short URLs for posts with <a href="http://yourls.org/" title="Your Own URL Shortener">YOURLS</a> (or other services such as tr.im) and tweet them.
 Author: Ozh
 Author URI: http://planetozh.com/
-Version: 1.3.1
+Version: 1.3.2
 */
 
 /* Release History :
@@ -22,6 +22,7 @@ Version: 1.3.1
  * 1.3:       Fixed: Don't generate short URLs on preview pages
               Fixed: Tweet when posting scheduled post or using the XMLRPC API
  * 1.3.1:     Added: option to add <link> in <real>
+ * 1.3.2:     Fixed: compat with YOURLS 1.4
  */
 
 
