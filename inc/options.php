@@ -45,6 +45,7 @@ function wp_ozh_yourls_sanitize($in) {
 function wp_ozh_yourls_do_page() {
 	$plugin_url = WP_PLUGIN_URL.'/'.plugin_basename( dirname(dirname(__FILE__)) );
 	?>
+
 	<div class="wrap">
 	
 	<?php /** ?>
@@ -288,7 +289,7 @@ function wp_ozh_yourls_drawbox($post) {
 	
 	$shorturl = wp_ozh_yourls_geturl( $id );
 	// Bummer, could not generate a short URL
-	if (!shorturl) {
+	if ( !$shorturl ) {
 		echo '<p>Bleh. The URL shortening service you configured could not be reached as of now. This might be a temporary problem, please try again later!</p>';
 		return;
 	}

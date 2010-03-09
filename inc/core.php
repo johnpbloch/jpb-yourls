@@ -97,7 +97,7 @@ function wp_ozh_yourls_send_tweet( $tweet ) {
 // The WP <-> YOURLS bridge function: get short URL of a WP post. Returns string(url)
 function wp_ozh_yourls_get_new_short_url( $url, $post_id = 0 ) {
 	global $wp_ozh_yourls;
-
+	
 	// Check plugin is configured
 	$service = wp_ozh_yourls_service();
 	if( !$service )
@@ -118,13 +118,14 @@ function wp_ozh_yourls_api_call( $api, $url) {
 	global $wp_ozh_yourls;
 
 	$shorturl = '';
-
+	
 	switch( $api ) {
 
 		case 'yourls-local':
 			global $yourls_reserved_URL;
 			define('YOURLS_INSTALLING', true); // Pretend we're installing YOURLS to bypass test for install or upgrade need
 			define('YOURLS_FLOOD_DELAY_SECONDS', 0); // Disable flood check
+			define('YOURLS_UNIQUE_URLS', true); // Don't duplicate long URLs
 			if( file_exists( dirname($wp_ozh_yourls['yourls_path']).'/load-yourls.php' ) ) { // YOURLS 1.4
 				global $ydb;
 				require_once( dirname($wp_ozh_yourls['yourls_path']).'/load-yourls.php' ); 
@@ -139,7 +140,7 @@ function wp_ozh_yourls_api_call( $api, $url) {
 			break;
 			
 		case 'yourls-remote':
-			$api_url = sprintf( $wp_ozh_yourls['yourls_url'] . '?username=%s&password=%s&url=%s&format=json&action=shorturl',
+			$api_url = sprintf( $wp_ozh_yourls['yourls_url'] . '?username=%s&password=%s&url=%s&format=json&action=shorturl&source=plugin',
 				$wp_ozh_yourls['yourls_login'], $wp_ozh_yourls['yourls_password'], urlencode($url) );
 			$json = wp_ozh_yourls_remote_json( $api_url );			
 			if ($json)
@@ -216,6 +217,8 @@ function wp_ozh_yourls_remote_json( $url ) {
 
 // Fetch a remote page. Input url, return content
 function wp_ozh_yourls_fetch_url( $url, $method='GET', $body=array(), $headers=array() ) {
+	if( !class_exists( 'WP_Http' ) )
+		include_once( ABSPATH . WPINC. '/class-http.php' );
 	$request = new WP_Http;
 	$result = $request->request( $url , array( 'method'=>$method, 'body'=>$body, 'headers'=>$headers, 'user-agent'=>'YOURLS http://yourls.org/' ) );
 
