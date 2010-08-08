@@ -14,14 +14,16 @@ function wp_ozh_yourls_add_head_link() {
 // Manual tweet from the Edit interface
 function wp_ozh_yourls_promote() {
 	check_ajax_referer( 'yourls' );
-	$account = $_POST['yourls_twitter_account'];
 	$post_id = (int) $_POST['yourls_post_id'];
-
-	if ( wp_ozh_yourls_send_tweet( stripslashes($_POST['yourls_tweet']) ) ) {
+	
+	$sent = wp_ozh_yourls_send_tweet( stripslashes($_POST['yourls_tweet']) );
+	
+	if ( !isset($sent->error) ) {
+		$account = wp_ozh_yourls_get_twitter_screen_name();
 		$result = "Success! Post was promoted on <a href='http://twitter.com/$account'>@$account</a>!";
 		update_post_meta($post_id, 'yourls_tweeted', 1);
 	} else {
-		$result = "Bleh. Could not promote this post on <a href='http://twitter.com/$account'>@$account</a>. Maybe Twitter is down? Please try again later!";
+		$result = $sent->error;
 	}
 	$x = new WP_AJAX_Response( array(
 		'data' => $result
@@ -56,6 +58,56 @@ function wp_ozh_yourls_reset_url() {
 	die('1');	
 }
 
+// Check YOURLS config - the part that receives Ajax: check if config/API are found
+function wp_ozh_yourls_check_yourls() {
+	check_ajax_referer( 'yourls' );
+	
+	switch( $_REQUEST['yourls_type'] ) {
+		case 'path':
+			$url = $_REQUEST['location'];
+			$result = wp_ozh_yourls_find_yourls_loader( $url ) ? 'OK !' : 'Not found';
+			break;
+		
+		case 'url':
+			// Make a JSON request
+			$params = array(
+				'format'   => 'json',
+				'username' => $_REQUEST['username'],
+				'password' => $_REQUEST['password'],
+				'action'   => 'stats'
+			);
+			$url = add_query_arg( $params, $_REQUEST['location'] );
+
+			$request = wp_ozh_yourls_remote_json( $url );
+			
+			// Check if we have JSON and if it's successful
+			if( $request ) {
+				if( $request->statusCode == 200 ) {
+					$result = 'OK !';
+				} else {
+					$result = $request->message;
+				}
+			} else {
+				$result = 'Not found';
+			}
+			break;
+	}
+
+	$x = new WP_AJAX_Response( array(
+		'data' => $result,
+		'supplemental' => array(
+			'location'  => $url,
+			'type'  => $_REQUEST['yourls_type'],
+			'req' => serialize( $request ),
+			'param' => $params,
+		),
+	) );
+	$x->send();
+	die('1');	
+}
+
+
+
 // Function called when new post. Expecting post object.
 function wp_ozh_yourls_newpost( $post ) {
 	global $wp_ozh_yourls;
@@ -63,39 +115,45 @@ function wp_ozh_yourls_newpost( $post ) {
 	$post_id = $post->ID;
 	$url = get_permalink( $post_id );
 	
-	if ( $post->post_type != 'post' && $post->post_type != 'page' )
-		return;
-		
 	// Generate short URL ?
-	if ( !wp_ozh_yourls_generate_on( $post->post_type ) )
+	if ( !wp_ozh_yourls_generate_on( $post->post_type ) ) {
 		return;
+	}
 	
-	$title = get_the_title($post_id);
-	$url = get_permalink ($post_id);
-	$short = wp_ozh_yourls_get_new_short_url( $url );
+	// Mark this post as "I'm currently fetching the page to get its title"
+	update_post_meta( $post_id, 'yourls_fetching', 1 );
 	
+	$url = get_permalink ( $post_id );
+	$keyword = apply_filters( 'yourls_custom_keyword', '', $post_id );
+	
+	$short = wp_ozh_yourls_get_new_short_url( $url, $post_id, $keyword );
+	
+	// Remove fetching flag
+	delete_post_meta( $post_id, 'yourls_fetching' );
+
 	// Tweet short URL ?
-	if ( !wp_ozh_yourls_tweet_on( $post->post_type ) )
+	if ( !wp_ozh_yourls_tweet_on( $post->post_type ) ) {
 		return;
+	}
 
 	if ( !get_post_custom_values( 'yourls_tweeted', $post_id ) ) {
 		// Not tweeted yet
-		$tweet = wp_ozh_yourls_maketweet( $short, $title );
+		$tweet = wp_ozh_yourls_maketweet( $short, $post->post_title, $post_id );
 		if ( wp_ozh_yourls_send_tweet( $tweet ) )
 			update_post_meta($post_id, 'yourls_tweeted', 1);
 	}
 	
 }
 
-// Tweet something. Returns boolean for success or failure.
+// Tweet something. Returns stuff.
 function wp_ozh_yourls_send_tweet( $tweet ) {
 	global $wp_ozh_yourls;
-	require_once( dirname(__FILE__) . '/twitter.php' );
-	return ( wp_ozh_yourls_tweet_it($wp_ozh_yourls['twitter_login'], $wp_ozh_yourls['twitter_password'], $tweet) );
+	require_once( dirname(__FILE__) . '/oauth.php' );
+	return wp_ozh_yourls_tweet_it( $tweet );
 }
 
 // The WP <-> YOURLS bridge function: get short URL of a WP post. Returns string(url)
-function wp_ozh_yourls_get_new_short_url( $url, $post_id = 0 ) {
+function wp_ozh_yourls_get_new_short_url( $url, $post_id = 0, $keyword = '', $title = '' ) {
 	global $wp_ozh_yourls;
 	
 	// Check plugin is configured
@@ -104,17 +162,39 @@ function wp_ozh_yourls_get_new_short_url( $url, $post_id = 0 ) {
 		return 'Plugin not configured: cannot find which URL shortening service to use';
 
 	// Get short URL
-	$shorturl = wp_ozh_yourls_api_call( $service, $url);
+	$shorturl = wp_ozh_yourls_api_call( $service, $url, $keyword, $title );
 
 	// Store short URL in a custom field
-	if ($post_id && $shorturl)
-		update_post_meta($post_id, 'yourls_shorturl', $shorturl);
+	if ( $post_id && $shorturl )
+		update_post_meta( $post_id, 'yourls_shorturl', $shorturl );
 
 	return $shorturl;
 }
 
+// Find yourls loader
+function wp_ozh_yourls_find_yourls_loader( $path = '' ) {
+	global $wp_ozh_yourls;
+	
+	$path = $path ? $path : $wp_ozh_yourls['yourls_path'];
+	
+	if( file_exists( dirname($path).'/load-yourls.php' ) ) {
+		// YOURLS 1.4+ & config.php in /includes
+		$path = dirname($path).'/load-yourls.php';
+
+	} elseif ( file_exists( dirname(dirname($path)).'/includes/load-yourls.php' ) )  {
+		// YOURLS 1.4+ & config.php in /user
+		$path = dirname(dirname($path)).'/includes/load-yourls.php';
+
+	} else {
+		// Bleh, wtf, loader not found?
+		$path = false;
+	}
+	
+	return $path;
+}
+
 // Tap into one of the available APIs. Return a short URL or false if error
-function wp_ozh_yourls_api_call( $api, $url) {
+function wp_ozh_yourls_api_call( $api, $url, $keyword = '', $title = '' ) {
 	global $wp_ozh_yourls;
 
 	$shorturl = '';
@@ -123,27 +203,39 @@ function wp_ozh_yourls_api_call( $api, $url) {
 
 		case 'yourls-local':
 			global $yourls_reserved_URL;
-			define('YOURLS_INSTALLING', true); // Pretend we're installing YOURLS to bypass test for install or upgrade need
-			define('YOURLS_FLOOD_DELAY_SECONDS', 0); // Disable flood check
-			define('YOURLS_UNIQUE_URLS', true); // Don't duplicate long URLs
-			if( file_exists( dirname($wp_ozh_yourls['yourls_path']).'/load-yourls.php' ) ) { // YOURLS 1.4
-				global $ydb;
-				require_once( dirname($wp_ozh_yourls['yourls_path']).'/load-yourls.php' ); 
-				$yourls_result = yourls_add_new_link($url, '');
-			} else { // YOURLS 1.3
-				require_once($wp_ozh_yourls['yourls_path']); 
-				$yourls_db = new wpdb(YOURLS_DB_USER, YOURLS_DB_PASS, YOURLS_DB_NAME, YOURLS_DB_HOST);
-				$yourls_result = yourls_add_new_link($url, '', $yourls_db);
+			if( !defined('YOURLS_FLOOD_DELAY_SECONDS') )
+				define('YOURLS_FLOOD_DELAY_SECONDS', 0); // Disable flood check
+			if( !defined('YOURLS_UNIQUE_URLS') && ( !defined('YOURLS_ALWAYS_FRESH') || YOURLS_ALWAYS_FRESH != true ) )
+				define('YOURLS_UNIQUE_URLS', true); // Don't duplicate long URLs
+
+			$include = wp_ozh_yourls_find_yourls_loader();
+			if( !$include ) {
+				add_action( 'admin_notices', create_function('', 'echo \'<div id="message" class="error"><p>Cannot find YOURLS. Please check your config.</p></div>\';') );
+				break;
 			}
+			
+			global $ydb;
+			require_once( $include ); 
+			$yourls_result = yourls_add_new_link( $url, $keyword, $title );
+
 			if ($yourls_result)
 				$shorturl = $yourls_result['shorturl'];
 			break;
 			
 		case 'yourls-remote':
-			$api_url = sprintf( $wp_ozh_yourls['yourls_url'] . '?username=%s&password=%s&url=%s&format=json&action=shorturl&source=plugin',
-				$wp_ozh_yourls['yourls_login'], $wp_ozh_yourls['yourls_password'], urlencode($url) );
+			$params = array(
+				'username' => $wp_ozh_yourls['yourls_login'],
+				'password' => $wp_ozh_yourls['yourls_password'],
+				'url'      => urlencode( $url ),
+				'keyword'  => urlencode( $keyword ),
+				'title'    => urlencode( $title ),
+				'format'   => 'json',
+				'source'   => 'plugin',
+				'action'   => 'shorturl'
+			);
+			$api_url = add_query_arg( $params, $wp_ozh_yourls['yourls_url'] );
 			$json = wp_ozh_yourls_remote_json( $api_url );			
-			if ($json)
+			if ( $json )
 				$shorturl = $json->shorturl;
 			break;
 		
@@ -155,14 +247,6 @@ function wp_ozh_yourls_api_call( $api, $url) {
 				$shorturl = $json->results->$url->shortUrl; // bit.ly's API makes ugly JSON, seriously, tbh
 			break;
 			
-		case 'trim':
-			$api_url = sprintf( 'http://api.tr.im/api/trim_url.json?url=%s&username=%s&password=%s',
-				urlencode($url), $wp_ozh_yourls['trim_login'], $wp_ozh_yourls['trim_password'] );
-			$json = wp_ozh_yourls_remote_json( $api_url );
-			if ($json)
-				$shorturl = $json->url;
-			break;
-		
 		case 'pingfm':
 			$api_url = 'http://api.ping.fm/v1/url.create';
 			$body = array(
@@ -235,39 +319,128 @@ function wp_ozh_yourls_fetch_url( $url, $method='GET', $body=array(), $headers=a
 
 
 // Parse the tweet template and make a 140 char string
-function wp_ozh_yourls_maketweet( $url, $title ) {
+function wp_ozh_yourls_maketweet( $url, $title, $id ) {
 	global $wp_ozh_yourls;
+	
+	$tweet = $wp_ozh_yourls['twitter_message'];
+	
+	// Plugin author: interrupt here before everything is parsed
+	$tweet = apply_filters( 'pre_ozh_yourls_tweet', $tweet, $url, $title, $id );
+
 	// Replace %U with short url
-	$tweet = str_replace('%U', $url, $wp_ozh_yourls['twitter_message']);
-	// Now replace %T with as many chars as possible to keep under 140
+	$tweet = str_replace('%U', $url, $tweet);
+	
+	// Replace %F{bleh} with custom post field 'bleh'
+	if( preg_match_all( '/%F\{([^\}]+)\}/', $tweet, $matches ) ) {
+		foreach( $matches[1] as $match ) {
+			$field = get_post_meta( $id, $match, true );
+			$tweet = str_replace('%F{'.$match.'}', $field, $tweet);
+		}
+		unset( $matches );
+	}
+	
+	// Get author info
+	$post = get_post( $id );
+	$author_id = $post->post_author;
+	$author_info = get_userdata( $author_id );
+	unset( $post );
+	
+	// Replace %A{bleh} with author data 'bleh'
+	if( preg_match_all( '/%A\{([^\}]+)\}/', $tweet, $matches ) ) {
+		foreach( $matches[1] as $match ) {
+			$tweet = str_replace('%A{'.$match.'}', $author_info->$match, $tweet);
+		}
+		unset( $matches );
+	}
+	
+	// Replace %A with author display name
+	$tweet = str_replace('%A', $author_info->display_name, $tweet);
+	
+	// Get tags (up to 3)
+	$_tags = array_slice( get_the_tags( $id ), 0, 3 );
+	$tags = array();
+	foreach( $_tags as $tag ) { $tags[] = strtolower( $tag->name ); }
+	unset( $_tags );
+
+	// Get categories (up to 3)
+	$_cats = array_slice( get_the_category( $id ), 0, 3 );
+	$cats = array();
+	foreach( $_cats as $cat ) { $cats[] = strtolower( $cat->name ); }
+	unset( $_cats );
+
+	// Replace %L with tags as plaintext (space separated if more than one) (up to 3 tags)
+	$tweet = str_replace('%L', join(' ', $tags), $tweet);
+	
+	// Replace %H with tags as hashtags (space separated if more than one) (up to 3 tags) 
+	$tweet = str_replace('%H', '#'.join(' #', $tags), $tweet);
+	
+	// Replace %C with categories (space separated if more than one) (up to 3 categories) 
+	$tweet = str_replace('%C', join(' ', $cats), $tweet);
+	
+	// Replace %D with categories as hashtags (space separated if more than one) (up to 3 categories) 
+	$tweet = str_replace('%D', '#'.join(' #', $cats), $tweet);
+
+	// Finally replace %T with as many chars as possible to keep under 140
+	$tweet = trim( $tweet );
 	$maxlen = 140 - ( strlen( $tweet ) - 2); // 2 = "%T"
 	if (strlen($title) > $maxlen) {
 		$title = substr($title, 0, ($maxlen - 3)) . '...';
 	}
-	
 	$tweet = str_replace('%T', $title, $tweet);
+
+	$tweet = apply_filters( 'ozh_yourls_tweet', $tweet, $url, $title, $id );
+
 	return $tweet;
 }
 
-// Init plugin options
-function wp_ozh_yourls_init(){
+// Init plugin on public part
+function wp_ozh_yourls_init() {
 	global $wp_ozh_yourls;
-	if (function_exists('register_setting')) // testing for the function existence in case we're initting out of of the admin scope
-		register_setting( 'wp_ozh_yourls_options', 'ozh_yourls', 'wp_ozh_yourls_sanitize' );
 	$wp_ozh_yourls = get_option('ozh_yourls');
+	
+	// check for OAuth requests on plugin load.
+	if( isset($_GET['oauth_start']) ) {
+		require_once( dirname(__FILE__).'/oauth.php' );
+		wp_ozh_yourls_oauth_start();
+	}
+	if( isset($_GET['oauth_token']) ) {
+		require_once( dirname(__FILE__).'/oauth.php' );
+		wp_ozh_yourls_oauth_confirm();
+	}
+	
 }
 
+// Init admin stuff
+function wp_ozh_yourls_admin_init() {
+	global $wp_ozh_yourls;
+	$wp_ozh_yourls = get_option('ozh_yourls');
 
-// Generate on... $type = 'post' or 'page', returns boolean
+	require_once( dirname(__FILE__).'/oauth.php' );
+
+	register_setting( 'wp_ozh_yourls_options', 'ozh_yourls', 'wp_ozh_yourls_sanitize' );
+
+	if ( !wp_ozh_yourls_settings_are_ok() ) {
+		add_action( 'admin_notices', 'wp_ozh_yourls_admin_notice' );
+	}
+
+	// Deprecated settings since we now use OAuth
+	if( isset( $wp_ozh_yourls['twitter_login'] ) or isset( $wp_ozh_yourls['twitter_password'] ) ) {
+		unset( $wp_ozh_yourls['twitter_login'] );
+		unset( $wp_ozh_yourls['twitter_password'] );
+		update_option( 'ozh_yourls', $wp_ozh_yourls );
+	}
+}
+
+// Generate on... $type = 'post' or 'page' or any custom post type, returns boolean
 function wp_ozh_yourls_generate_on( $type ) {
 	global $wp_ozh_yourls;
-	return ( $wp_ozh_yourls['generate_on_'.$type] == 1 );
+	return ( isset( $wp_ozh_yourls['generate_on_'.$type] ) && $wp_ozh_yourls['generate_on_'.$type] == 1 );
 }
 
-// Send tweet on... $type = 'post' or 'page', returns boolean
+// Send tweet on... $type = 'post' or 'page' or any custom post type, returns boolean
 function wp_ozh_yourls_tweet_on( $type ) {
 	global $wp_ozh_yourls;
-	return ( $wp_ozh_yourls['tweet_on_'.$type] == 1 );
+	return ( isset( $wp_ozh_yourls['tweet_on_'.$type] ) && $wp_ozh_yourls['tweet_on_'.$type] == 1 );
 }
 
 // Determine which service to use. Return string
@@ -292,6 +465,30 @@ function wp_ozh_yourls_customicon($in) {
 function wp_ozh_yourls_plugin_actions($links) {
 	$links[] = "<a href='options-general.php?page=ozh_yourls'><b>Settings</b></a>";
 	return $links;
+}
+
+// Shortcut to WP function wp_get_shortlink. First parameter passed by filter, $id is post id
+function wp_ozh_yourls_wp_get_shortlink( $false, $id ) {
+	if( !$id ) {
+		global $wp_query;
+		$id = $wp_query->get_queried_object_id();
+	}
+	$type = get_post_type( $id );
+	
+	// No ID ? Return nothing (not generating a short URL for home URL. I think that's silly?)
+	if( !$id )
+		return null;
+	
+	// Check if user wants a short link generated for this type of post
+	if( !wp_ozh_yourls_generate_on( $type ) )
+		return null;
+		
+	// Check if this post is published
+	if( 'publish' != get_post_status( $id ) )
+		return null;
+
+	// Still here? Must mean we really need a short URL then!
+	return wp_ozh_yourls_geturl( $id );
 }
 
 

@@ -1,10 +1,25 @@
 <?php
 
+// Display notice prompting for settings
+function wp_ozh_yourls_admin_notice() {
+	global $plugin_page;
+	if( $plugin_page == 'ozh_yourls' ) {
+		$message = '<strong>YOURLS - WordPress to Twitter</strong> configuration incomplete';
+	} else {
+		$url = menu_page_url( 'ozh_yourls', false );
+		$message = 'Please configure <strong>YOURLS - WordPress to Twitter</strong> <a href="'.$url.'">settings</a> now';
+	}
+	echo <<<NOTICE
+	<div class="error"><p>$message</p></div>
+NOTICE;
+}
+
 // Add page to menu
 function wp_ozh_yourls_add_page() {
 	// Loading CSS & JS *only* where needed. Do it this way too, goddamnit.
 	$page = add_options_page('YOURLS: WordPress to Twitter', 'YOURLS', 'manage_options', 'ozh_yourls', 'wp_ozh_yourls_do_page');
 	add_action("load-$page", 'wp_ozh_yourls_add_css_js_plugin');
+	add_action("load-$page", 'wp_ozh_yourls_handle_action_links');
 	// Add the JS & CSS for the char counter. This is too early to check wp_ozh_yourls_generate_on('post') or ('page')
 	add_action('load-post.php', 'wp_ozh_yourls_add_css_js_post');
 	add_action('load-post-new.php', 'wp_ozh_yourls_add_css_js_post');
@@ -14,8 +29,10 @@ function wp_ozh_yourls_add_page() {
 
 // Add style & JS on the plugin page
 function wp_ozh_yourls_add_css_js_plugin() {
+	add_thickbox();
 	$plugin_url = WP_PLUGIN_URL.'/'.plugin_basename( dirname(dirname(__FILE__)) );
 	wp_enqueue_script('yourls_js', $plugin_url.'/res/yourls.js');
+	wp_enqueue_script('wp-ajax-response');
 	wp_enqueue_style('yourls_css', $plugin_url.'/res/yourls.css');
 }
 
@@ -31,21 +48,143 @@ function wp_ozh_yourls_add_css_js_post() {
 }
 
 // Sanitize & validate options that are submitted
-function wp_ozh_yourls_sanitize($in) {
+function wp_ozh_yourls_sanitize( $in ) {
+	global $wp_ozh_yourls;
+	
 	// all options: sanitized strings
 	$in = array_map( 'esc_attr', $in);
-	// extra zealotry : 0 or 1 for generate_on_post, tweet_on_post, generate_on_page, tweet_on_page
-	foreach( array('generate_on_post', 'tweet_on_post', 'generate_on_page', 'tweet_on_page') as $item ) {
-		$in[$item] = ( $in[$item] == 1 ? 1 : 0 );
+	
+	// 0 or 1 for generate_on_*, tweet_on_*, link_on_*
+	foreach( $in as $key=>$value ) {
+		if( preg_match( '/^(generate|tweet)_on_/', $key ) ) {
+			$in[$key] = ( $value == 1 ? 1 : 0 );
+		}
 	}
+	
+	// Twitter keys
+	$in['consumer_key'] = wp_ozh_yourls_validate_key( $in['consumer_key'] );
+	$in['consumer_secret'] = wp_ozh_yourls_validate_key( $in['consumer_secret'] );
+	
+	// Keep options that are not set via form
+	$in['yourls_acc_token']  = $wp_ozh_yourls['yourls_acc_token'];
+	$in['yourls_acc_secret'] = $wp_ozh_yourls['yourls_acc_secret'];
+	
 	return $in;
+}
+
+// Validate Twitter keys
+function wp_ozh_yourls_validate_key( $key ) {
+	$key = trim( $key );
+	if( !preg_match('/^[A-Za-z0-9]+$/', $key) )
+		  $key = '';
+	return $key;
+}
+
+// Admin notice telling the Twitter keys were reset because invalid
+function wp_ozh_yourls_admin_notice_twitter_key() {
+	echo <<<OOPS
+	<div class="error"><p>The Consumer or Secret Key is invalid. Please re-input.</p></div>
+OOPS;
+}
+
+// Check if plugin seems configured. Param: 'overall' return one single bool, otherwise return details
+function wp_ozh_yourls_settings_are_ok( $check = 'overall' ) {
+	global $wp_ozh_yourls;
+	
+	$check_twitter   = ( wp_ozh_yourls_twitter_keys_empty() ? false : true );
+	$check_yourls    = ( isset( $wp_ozh_yourls['service'] ) && !empty( $wp_ozh_yourls['service'] ) ? true : false );
+	$check_wordpress = ( isset( $wp_ozh_yourls['twitter_message'] ) && !empty( $wp_ozh_yourls['twitter_message'] ) ? true : false );
+	
+	if( $check == 'overall' ) {
+		$overall = $check_twitter && $check_yourls && $check_wordpress ;
+		return $overall;
+	} else {
+		return array( 'check_yourls' => $check_yourls, 'check_twitter' => $check_twitter, 'check_wordpress' => $check_wordpress );
+	}
+}
+
+// Handle action links (reset or unlink)
+function wp_ozh_yourls_handle_action_links() {
+	$actions = array( 'reset', 'unlink' );
+	if( !isset( $_GET['action'] ) or !in_array( $_GET['action'], $actions ) )
+		return;
+
+	$action = $_GET['action'];
+	$nonce  = $_GET['_wpnonce'];
+	
+	if ( !wp_verify_nonce( $nonce, $action.'-yourls') )
+		wp_die( "Invalid link" );
+	
+	global $wp_ozh_yourls;
+		
+	switch( $action ) {
+	
+		case 'unlink':
+			wp_ozh_yourls_session_destroy();
+			$wp_ozh_yourls['consumer_key'] =
+				$wp_ozh_yourls['consumer_secret'] =
+				$wp_ozh_yourls['yourls_acc_token'] = 
+				$wp_ozh_yourls['yourls_acc_secret'] = '';
+			update_option( 'ozh_yourls', $wp_ozh_yourls );
+			break;
+
+		case 'reset':
+			wp_ozh_yourls_session_destroy();
+			$wp_ozh_yourls = array();
+			delete_option( 'ozh_yourls' );
+			break;
+
+	}
+	
+	wp_redirect( menu_page_url( 'ozh_yourls', false ) );
+}
+
+// Destroy session
+function wp_ozh_yourls_session_destroy() {
+	$_SESSION = array();
+	if ( isset( $_COOKIE[session_name()] ) ) {
+	   setcookie( session_name(), '', time()-42000, '/' );
+	}
+	session_destroy();
 }
 
 // Draw the option page
 function wp_ozh_yourls_do_page() {
 	$plugin_url = WP_PLUGIN_URL.'/'.plugin_basename( dirname(dirname(__FILE__)) );
-	?>
+	
+	$ozh_yourls = get_option('ozh_yourls'); 
+	
+	extract( wp_ozh_yourls_settings_are_ok( 'all' ) ); // $check_twitter, $check_yourls, $check_wordpress
+	
+	// If only one of the 3 $check_ is false, expand that section, otherwise expand first
+	switch( intval( $check_twitter ) + intval( $check_yourls ) + intval( $check_wordpress ) ) {
+		case 0:
+		case 3:
+			$script_expand = "jQuery('#h3_yourls').click();";
+			break;
+		case 1:
+		case 2:
+			if( !$check_yourls ) {
+				$script_expand = "jQuery('#h3_yourls').click();";
+			} elseif( !$check_twitter ) {
+				$script_expand = "jQuery('#h3_twitter').click();";
+			} else {
+				$script_expand = "jQuery('#h3_wordpress').click();";
+			}
+			break;
+	}
 
+	
+	?>
+	<script>
+	jQuery(document).ready(function(){
+		toggle_ok_notok('#h3_check_yourls', '<?php echo $check_yourls ? 'ok' : 'notok' ; ?>' );
+		toggle_ok_notok('#h3_check_twitter', '<?php echo $check_twitter ? 'ok' : 'notok' ; ?>' );
+		toggle_ok_notok('#h3_check_wordpress', '<?php echo $check_wordpress ? 'ok' : 'notok' ; ?>' );
+		<?php echo $script_expand; ?>
+	});
+	</script>	
+	
 	<div class="wrap">
 	
 	<?php /** ?>
@@ -62,27 +201,27 @@ function wp_ozh_yourls_do_page() {
 		<div class="y_text">
 			<p><a href="http://yourls.org/">YOURLS</a> is a free URL shortener service you can run on your webhost to have your own personal TinyURL.</p>
 			<p>This plugin is a bridge between <a href="http://yourls.org/">YOURLS</a>, <a href="http://twitter.com/">Twitter</a> and your blog: when you'll submit a new post or page, your blog will tap into YOURLS to generate a short URL for it, and will then tweet it.</p>
-			<p>Note that, for maximum fun, this plugin also supports a few other public URL shortener services: tr.im, is.gd, tinyURL and bit.ly</p>
+			<p>Note that, for maximum fun, this plugin also supports a few other public URL shortener services: is.gd, tinyURL and bit.ly</p>
 		</div>
 	</div>
 	
 	<form method="post" action="options.php">
 	<?php settings_fields('wp_ozh_yourls_options'); ?>
-	<?php $ozh_yourls = get_option('ozh_yourls'); ?>
 
-	<h3>URL Shortener Settings</h3>
+	<h3>URL Shortener Settings <span class="h3_toggle expand" id="h3_yourls">+</span> <span id="h3_check_yourls" class="h3_check">*</span></h3>
 
+	<div class="div_h3" id="div_h3_yourls">
 	<table class="form-table">
 
 	<tr valign="top">
-	<th scope="row">URL Shortener Service</th>
+	<th scope="row">URL Shortener Service<span class="mandatory">*</span></th>
 	<td>
 
 	<label for="y_service">You are using:</label>
 	<select name="ozh_yourls[service]" id="y_service" class="y_toggle">
 	<option value="" <?php selected( '', $ozh_yourls['service'] ); ?> >Please select..</option>
 	<option value="yourls" <?php selected( 'yourls', $ozh_yourls['service'] ); ?> >your own YOURLS install</option>
-	<option value="other" <?php selected( 'other', $ozh_yourls['service'] ); ?> >another public service such as TinyURL or tr.im</option>
+	<option value="other" <?php selected( 'other', $ozh_yourls['service'] ); ?> >another public service such as TinyURL or bit.ly</option>
 	</select>
 	
 	<?php $hidden = ( $ozh_yourls['service'] == 'yourls' ? '' : 'y_hidden' ) ; ?>
@@ -96,18 +235,20 @@ function wp_ozh_yourls_do_page() {
 		
 		<?php $hidden = ( $ozh_yourls['location'] == 'local' ? '' : 'y_hidden' ) ; ?>
 		<div id="y_show_local" class="<?php echo $hidden; ?> y_location y_level3">
-			<label for="y_path">Path to the YOURLS config file</label> <input type="text" class="y_longfield" id="y_path" name="ozh_yourls[yourls_path]" value="<?php echo $ozh_yourls['yourls_path']; ?>"/> <span id="y_test_path"></span><br/>
+			<label for="y_path">Path to YOURLS <tt>config.php</tt></label> <input type="text" class="y_longfield" id="y_path" name="ozh_yourls[yourls_path]" value="<?php echo $ozh_yourls['yourls_path']; ?>"/> <span id="check_path" class="yourls_check button">check</span><br/>
 			<em>Example: <tt>/home/you/site.com/yourls/includes/config.php</tt></em>
 		</div>
 		
 		<?php $hidden = ( $ozh_yourls['location'] == 'remote' ? '' : 'y_hidden' ) ; ?>
 		<div id="y_show_remote" class="<?php echo $hidden; ?> y_location y_level3">
-			<label for="y_url">URL to the YOURLS API</label> <input type="text" id="y_url" class="y_longfield" name="ozh_yourls[yourls_url]" value="<?php echo $ozh_yourls['yourls_url']; ?>"/> <span id="y_test_url"></span><br/>
+			<label for="y_url">URL to the YOURLS API</label> <input type="text" id="y_url" class="y_longfield" name="ozh_yourls[yourls_url]" value="<?php echo $ozh_yourls['yourls_url']; ?>"/> <span id="check_url" class="yourls_check button">check</span><br/>
 			<em>Example: <tt>http://site.com/yourls-api.php</tt></em><br/>
 			<label for="y_yourls_login">YOURLS Login</label> <input type="text" id="y_yourls_login" name="ozh_yourls[yourls_login]" value="<?php echo $ozh_yourls['yourls_login']; ?>"/><br/>
 			<label for="y_yourls_passwd">YOURLS Password</label> <input type="password" id="y_yourls_passwd" name="ozh_yourls[yourls_password]" value="<?php echo $ozh_yourls['yourls_password']; ?>"/><br/>
 		</div>
-		
+		<?php
+		wp_nonce_field( 'yourls', '_ajax_yourls', false );
+		?>
 	</div>
 	
 	<?php $hidden = ( $ozh_yourls['service'] == 'other' ? '' : 'y_hidden' ) ; ?>
@@ -116,7 +257,6 @@ function wp_ozh_yourls_do_page() {
 		<label for="y_other">Public service</label>
 		<select name="ozh_yourls[other]" id="y_other" class="y_toggle">
 		<option value="" <?php selected( '', $ozh_yourls['other'] ); ?> >Please select...</option>
-		<option value="trim" <?php selected( 'trim', $ozh_yourls['other'] ); ?> >tr.im</option>
 		<!--<option value="pingfm" <?php selected( 'pingfm', $ozh_yourls['other'] ); ?> >ping.fm</option>-->
 		<option value="bitly" <?php selected( 'bitly', $ozh_yourls['other'] ); ?> >bit.ly</option>
 		<option value="tinyurl" <?php selected( 'tinyurl', $ozh_yourls['other'] ); ?> >tinyURL</option>
@@ -130,13 +270,6 @@ function wp_ozh_yourls_do_page() {
 			<em>If you have a <a href="http://bit.ly/account/">bit.ly</a> account, entering your credentials will link the short URLs to it</em>
 		</div>
 
-		<?php $hidden = ( $ozh_yourls['other'] == 'trim' ? '' : 'y_hidden' ) ; ?>
-		<div id="y_show_trim" class="<?php echo $hidden; ?> y_other y_level3">
-			<label for="y_api_trim_login">Username</label> <input type="text" id="y_api_trim_login" name="ozh_yourls[trim_login]" value="<?php echo $ozh_yourls['trim_login']; ?>"/><br/>
-			<label for="y_api_trim_pass">Password</label> <input type="password" id="y_api_trim_pass" name="ozh_yourls[trim_password]" value="<?php echo $ozh_yourls['trim_password']; ?>"/><br/>
-			<em>If you have a <a href="http://tr.im/">tr.im</a> account, entering your credentials will link the short URLs to it</em>
-		</div>
-		
 		<?php $hidden = ( $ozh_yourls['other'] == 'pingfm' ? '' : 'y_hidden' ) ; ?>
 		<div id="y_show_pingfm" class="<?php echo $hidden; ?> y_other y_level3">
 			<label for="y_api_pingfm_user_app_key">Web Key</label> <input type="text" id="y_api_pingfm_user_app_key" name="ozh_yourls[pingfm_user_app_key]" value="<?php echo $ozh_yourls['pingfm_user_app_key']; ?>"/><br/>
@@ -159,99 +292,127 @@ function wp_ozh_yourls_do_page() {
 	</td>
 	</tr>
 	</table>
-
-	<h3>Twitter Settings</h3> 
+	</div><!-- div_h3_yourls -->
+	
+	<h3>Twitter Settings <span class="h3_toggle expand" id="h3_twitter">+</span> <span id="h3_check_twitter" class="h3_check">*</span></h3> 
+	
+	<?php
+	$blogurl  = get_home_url();
+	$blogname = urlencode( get_bloginfo( 'name' ) );
+	$blogdesc = urlencode( trim( get_bloginfo( 'description' ), '.' ).'. Powered by YOURLS.' );
+	$help_url = $plugin_url."/res/fake_twitter/frame.php?base=$plugin_url&amp;name=YOURLS&amp;org=$blogname&amp;url=$blogurl&amp;desc=$blogdesc&tb_iframe=1&width=600&height=600";
+	?>
+	
+	<div class="div_h3" id="div_h3_twitter">
+	<p>To connect your site to Twitter, you need to register your blog as a <strong>Twitter Application</strong> and get a <strong>Consumer Key</strong> and <strong>Consumer Secret</strong>.</p>
+	<p>Already registered? Find your keys on <a href="http://twitter.com/apps">Twitter Application List</a></p>
+	<p>Need to register? Head to <a id="twitter_new_app" href="http://twitter.com/apps/new">Twitter: Register an Application</a> and fill the form as <a href="<?php echo $help_url; ?>" class="thickbox">in this help screen</a></p>
 
 	<table class="form-table">
 
 	<tr valign="top">
-	<th scope="row">Twitter Login</th>
-	<td><input id="tw_login" name="ozh_yourls[twitter_login]" type="text" value="<?php echo $ozh_yourls['twitter_login']; ?>"/></td>
+	<th scope="row">Twitter Consumer Key<span class="mandatory">*</span></th>
+	<td><input id="consumer_key" name="ozh_yourls[consumer_key]" type="text" size="50" value="<?php echo $ozh_yourls['consumer_key']; ?>"/></td>
 	</tr>
 
 	<tr valign="top">
-	<th scope="row">Twitter Password</th>
-	<td><input id="tw_passwd" name="ozh_yourls[twitter_password]" type="password" value="<?php echo $ozh_yourls['twitter_password']; ?>"/></td>
+	<th scope="row">Twitter Consumer Secret<span class="mandatory">*</span></th>
+	<td><input id="consumer_secret" name="ozh_yourls[consumer_secret]" type="text" size="50" value="<?php echo $ozh_yourls['consumer_secret']; ?>"/></td>
 	</tr>
+	
+	<td colspan="2" id="yourls_twitter_infos">
+	<span id="yourls_now_connect"></span>
+	<?php
+	if( !wp_ozh_yourls_twitter_keys_empty( 'consumer' ) ) {
+		wp_ozh_yourls_twitter_button_or_infos(); // in oauth.php
+	}
+	?>
+	</td>
 	
 	</table>
 	
-	<h3>When to generate a short URL and tweet it</h3> 
+	
+	</div> <!-- div_h3_twitter -->
+	
+	<h3>WordPress settings <span class="h3_toggle expand" id="h3_wordpress">+</span> <span id="h3_check_wordpress" class="h3_check">*</span></h3> 
 
+	<div class="div_h3" id="div_h3_wordpress">
+
+	<h4>When to generate a short URL and tweet it</h4> 
+	
 	<table class="form-table">
 
-	<tr valign="top">
-	<th scope="row">New <strong>post</strong> published</th>
-	<td>
-	<input class="y_toggle" id="generate_on_post" name="ozh_yourls[generate_on_post]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['generate_on_post'] ); ?> /><label for="generate_on_post"> Generate short URL</label><br/>
-	<?php $hidden = ( $ozh_yourls['generate_on_post'] == '1' ? '' : 'y_hidden' ) ; ?>
-	<div id="y_show_generate_on_post" class="<?php echo $hidden; ?> generate_on_post">
-		<input id="tweet_on_post" name="ozh_yourls[tweet_on_post]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['tweet_on_post'] ); ?> /><label for="tweet_on_post"> Send a tweet with the short URL</label>
-	</div>
-	</td>
-	</tr>
-
-	<tr valign="top">
-	<th scope="row">New <strong>page</strong> published</th>
-	<td>
-	<input class="y_toggle" id="generate_on_page" name="ozh_yourls[generate_on_page]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['generate_on_page'] ); ?> /><label for="generate_on_page"> Generate short URL</label><br/>
-	<?php $hidden = ( $ozh_yourls['generate_on_page'] == '1' ? '' : 'y_hidden' ) ; ?>
-	<div id="y_show_generate_on_page" class="<?php echo $hidden; ?> generate_on_page">
-		<input id="tweet_on_page" name="ozh_yourls[tweet_on_page]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['tweet_on_page'] ); ?> /><label for="tweet_on_page"> Send a tweet with the short URL</label>
-	</div>
-	</td>
-	</tr>
+	<?php
+	$types = get_post_types( array('publicly_queryable' => 1 ), 'objects' );
+	foreach( $types as $type=>$object ) {
+		$name = $object->labels->singular_name
+		?>
+		<tr valign="top">
+		<th scope="row">New <strong><?php echo $name; ?></strong> published</th>
+		<td>
+		<input class="y_toggle" id="generate_on_<?php echo $type; ?>" name="ozh_yourls[generate_on_<?php echo $type; ?>]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['generate_on_'.$type] ); ?> /><label for="generate_on_<?php echo $type; ?>"> Generate short URL</label><br/>
+		<?php $hidden = ( $ozh_yourls['generate_on_'.$type] == '1' ? '' : 'y_hidden' ) ; ?>
+		<?php if( $type != 'attachment' ) { ?>
+		<div id="y_show_generate_on_<?php echo $type; ?>" class="<?php echo $hidden; ?> generate_on_<?php echo $type; ?>">
+			<input id="tweet_on_<?php echo $type; ?>" name="ozh_yourls[tweet_on_<?php echo $type; ?>]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['tweet_on_'.$type] ); ?> /><label for="tweet_on_<?php echo $type; ?>"> Send a tweet with the short URL</label>
+		</div>
+		<?php } ?>
+		</td>
+		</tr>
+	<?php } ?>
 
 	</table>
 
-	<h3>What to tweet</h3> 
+	<h4>What to tweet</h4> 
 
 	<table class="form-table">
 
 	<tr valign="top">
-	<th scope="row">Tweet message</th>
+	<th scope="row">Tweet message<span class="mandatory">*</span></th>
 	<td><input id="tw_msg" name="ozh_yourls[twitter_message]" type="text" size="50" value="<?php echo $ozh_yourls['twitter_message']; ?>"/><br/>
 	This is your tweet template. The plugin will replace <tt>%T</tt> with the post title and <tt>%U</tt> with its short URL, with as much text as possible so it fits in the 140 character limit<br/>
 	Examples (click one to copy)<br/>
 	<ul id="tw_msg_sample">
 		<li><code class="tw_msg_sample">Fresh on <?php bloginfo();?>: %T %U</code></li>
-		<li><code class="tw_msg_sample">From the blog: %T %U</code></li>
+		<li><code class="tw_msg_sample">Just posted: %T %U</code></li>
 		<li><code class="tw_msg_sample">%T - %U</code></li>
 	</ul>
 	<em>Tip: Keep the tweet message template short!</em>
+	<h4 id="toggle_advanced_template">Advanced template</h4>
+	<div id="advanced_template">
+		You can use all of the following tokens in your tweet template:
+		<ul>
+			<li><b><tt>%U</tt></b>: shorturl</li>
+			<li><b><tt>%T</tt></b>: post title</li>
+			<li><b><tt>%A</tt></b>: author's display name</li>
+			<li><b><tt>%A{something}</tt></b>: author's 'something' as stored in the database. Example: %A{first_name}. See <a href="http://codex.wordpress.org/Function_Reference/get_userdata">get_userdata()</a>.</li>
+			<li><b><tt>%F{something}</tt></b>: custom post field 'something'. See <a href="http://codex.wordpress.org/Function_Reference/get_post_meta">get_post_meta()</a>.</li>
+			<li><b><tt>%L</tt></b>: tags as plaintext and lowercase (space separated if more than one, up to 3 tags)</li>
+			<li><b><tt>%H</tt></b>: tags as hashtags and lowercase (space separated if more than one, up to 3 tags)</li>
+			<li><b><tt>%C</tt></b>: categories as plaintext and lowercase (space separated if more than one, up to 3 categories)</li>
+			<li><b><tt>%D</tt></b>: categories as hashtags and lowercase (space separated if more than one, up to 3 categories)</li>
+		</ul>
+		Remember that you only have 140 characters! The title will be added last, so if you put too many tokens like hashtags and stuff, the title might get trimmed hard!
+	</div>
 	</td>
 	</td>
 	</tr>
 
 	</table>
 	
-	<h3>Short URL auto-discovery</h3>
+	</div> <!-- div_h3_wordpress -->
 	
-	<p>Add a <code>&lt;link></code> in the <code>&lt;head></code> (more info: <a href="http://microformats.org/wiki/rel-shortlink">microformats.org</a>, <a href="http://wiki.snaplog.com/short_url">short url discovery</a>)</p>
-	
-	<table class="form-table">
-
-	<tr valign="top">
-	<th scope="row">On individual posts</th>
-	<td>
-	<input id="link_on_post" name="ozh_yourls[link_on_post]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['link_on_post'] ); ?> /><label for="link_on_post"> </label><br/>
-	</td>
-	</tr>
-
-	<tr valign="top">
-	<th scope="row">On individual pages</th>
-	<td>
-	<input id="link_on_page" name="ozh_yourls[link_on_page]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['link_on_page'] ); ?> /><label for="link_on_page"> </label><br/>
-	</td>
-	</tr>
-
-	</table>
-	
-
+	<?php
+	$reset = add_query_arg( array('action' => 'reset'), menu_page_url( 'ozh_yourls', false ) );
+	$reset = wp_nonce_url( $reset, 'reset-yourls' );
+	?>
 
 	<p class="submit">
 	<input type="submit" class="button-primary y_submit" value="<?php _e('Save Changes') ?>" />
+	<?php echo "<a href='$reset' id='reset-yourls' class='submitdelete'>Reset</a> all settings"; ?>
 	</p>
+	
+	<p><small><span class="mandatory">*</span> denotes a mandatory field. Click on the <img src="<?php echo $plugin_url; ?>/res/expand.png" /> to expand a setting section. </small></p>
 
 	</form>
 
@@ -263,27 +424,24 @@ function wp_ozh_yourls_do_page() {
 
 // Add meta boxes to post & page edit
 function wp_ozh_yourls_addbox() {
-	// add_meta_box($id, $title, $callback, $page, $context = 'advanced', $priority = 'default')
-	if ( wp_ozh_yourls_generate_on('post') )
-		add_meta_box('yourlsdiv', 'Short URL &amp; Tweet', 'wp_ozh_yourls_drawbox', 'post', 'side', 'default');
-	if ( wp_ozh_yourls_generate_on('page') )
-		add_meta_box('yourlsdiv', 'Short URL &amp; Tweet', 'wp_ozh_yourls_drawbox', 'page', 'side', 'default');
+	// What page are we on? (new Post, new Page, new custom post type?)
+	$post_type = isset( $_GET['post_type'] ) ? $_GET['post_type'] : 'post' ;
+	add_meta_box( 'yourlsdiv', 'YOURLS', 'wp_ozh_yourls_drawbox', $post_type, 'side', 'default' );
+	
+	// TODO: do something with links. Or wait till they're considered custom post types.
 }
 
+
 // Draw meta box
-function wp_ozh_yourls_drawbox($post) {
+function wp_ozh_yourls_drawbox( $post ) {
 	$type = $post->post_type;
 	$status = $post->post_status;
 	$id = $post->ID;
 	$title = $post->post_title;
-
-	if ($type != 'post' && $type !='page')
-		return; // Not sure this can actually happen since add_meta_box() should take care of this. Just in case.
 	
 	// Too early, young Padawan
-	if ($status != 'publish') {
-		echo '<p>When you publish this post, you will be able here to (re)promote it via Twitter.</p>
-		<p>Depending on <a href="options-general.php?page=ozh_yourls">configuration</a>, this also happens automagically when you press "Publish" of course :)</p>';
+	if ( $status != 'publish' ) {
+		echo '<p>Depending on <a href="options-general.php?page=ozh_yourls">configuration</a>, a short URL will be generated and/or a tweet will be sent.</p>';
 		return;
 	}
 	
@@ -294,14 +452,7 @@ function wp_ozh_yourls_drawbox($post) {
 		return;
 	}
 	
-
-	
-	global $wp_ozh_yourls;
-	$action = 'Tweet this';
-	$promote = "Promote this $type";
-	$tweeted = get_post_meta( $id, 'yourls_tweeted', true );
-	$account = $wp_ozh_yourls['twitter_login'];
-
+	// YOURLS part:	
 	wp_nonce_field( 'yourls', '_ajax_yourls', false );
 	echo '
 	<input type="hidden" id="yourls_post_id" value="'.$id.'" />
@@ -316,6 +467,16 @@ function wp_ozh_yourls_drawbox($post) {
 	echo '<p style="text-align:right"><input class="button" id="yourls_reset" type="submit" value="Reset short URL" /></p>';
 	echo '</div>';
 	
+
+	// Twitter part:
+	if( wp_ozh_yourls_twitter_keys_empty() or wp_ozh_yourls_get_twitter_screen_name() === false )
+		return;
+	
+	$action = 'Tweet this';
+	$promote = "Promote this $type";
+	$tweeted = get_post_meta( $id, 'yourls_tweeted', true );
+	$account = wp_ozh_yourls_get_twitter_screen_name();
+
 	echo '<p><strong>'.$promote.' on <a href="http://twitter.com/'.$account.'">@'.$account.'</a>: </strong></p>
 	<div id="yourls-promote">';
 	if ($tweeted) {
@@ -326,113 +487,6 @@ function wp_ozh_yourls_drawbox($post) {
 	echo '<p><textarea id="yourls_tweet" rows="1" style="width:100%">'.wp_ozh_yourls_maketweet( $shorturl, $title ).'</textarea></p>
 	<p style="text-align:right"><input class="button" id="yourls_promote" type="submit" value="'.$action.'" /></p>
 	</div>';
-	
-	?>
-	<script type="text/javascript">
-	/* <![CDATA[ */
-	(function($){
-		var yourls = {
-			// Send a tweet
-			send: function() {
-			
-				var post = {};
-				post['yourls_tweet'] = $('#yourls_tweet').val();
-				post['yourls_post_id'] = $('#yourls_post_id').val();
-				post['yourls_twitter_account'] = $('#yourls_twitter_account').val();
-				post['action'] = 'yourls-promote';
-				post['_ajax_nonce'] = $('#_ajax_yourls').val();
-
-				$('#yourls-promote').html('<p>Please wait...</p>');
-
-				$.ajax({
-					type : 'POST',
-					url : '<?php echo admin_url('admin-ajax.php'); ?>',
-					data : post,
-					success : function(x) { yourls.success(x, 'yourls-promote'); },
-					error : function(r) { yourls.error(r, 'yourls-promote'); }
-				});
-			},
-			
-			// Reset short URL
-			reset: function() {
-			
-				var post = {};
-				post['yourls_post_id'] = $('#yourls_post_id').val();
-				post['yourls_shorturl'] = $('#yourls_shorturl').val();
-				post['action'] = 'yourls-reset';
-				post['_ajax_nonce'] = $('#_ajax_yourls').val();
-
-				$('#yourls-shorturl').html('<p>Please wait...</p>');
-
-				$.ajax({
-					type : 'POST',
-					url : '<?php echo admin_url('admin-ajax.php'); ?>',
-					data : post,
-					success : function(x) { yourls.success(x, 'yourls-shorturl'); yourls.update(x); },
-					error : function(r) { yourls.error(r, 'yourls-shorturl'); }
-				});
-			},
-			
-			// Update short URL in the tweet textarea
-			update: function(x) {
-				var r = wpAjax.parseAjaxResponse(x);
-				r = r.responses[0];
-				var oldurl = r.supplemental.old_shorturl;
-				var newurl = r.supplemental.shorturl;
-				var bg = jQuery('#yourls_tweet').css('backgroundColor');
-				if (bg == 'transparent') {bg = '#fff';}
-
-				$('#yourls_tweet')
-					.val( $('#yourls_tweet').val().replace(oldurl, newurl) )
-					.animate({'backgroundColor':'#ff8'}, 500, function(){
-						jQuery('#yourls_tweet').animate({'backgroundColor':bg}, 500)
-					});
-			},
-			
-			// Ajax: success
-			success : function(x, div) {
-				if ( typeof(x) == 'string' ) {
-					this.error({'responseText': x}, div);
-					return;
-				}
-
-				var r = wpAjax.parseAjaxResponse(x);
-				if ( r.errors )
-					this.error({'responseText': wpAjax.broken}, div);
-
-				r = r.responses[0];
-				$('#'+div).html('<p>'+r.data+'</p>');
-			},
-
-			// Ajax: failure
-			error : function(r, div) {
-				var er = r.statusText;
-				if ( r.responseText )
-					er = r.responseText.replace( /<.[^<>]*?>/g, '' );
-				if ( er )
-					$('#'+div).html('<p>Error during Ajax request: '+er+'</p>');
-			}
-		};
-		
-		$(document).ready(function(){
-			$('#yourls_promote').click(function(e) {
-				yourls.send();
-				e.preventDefault();
-			});
-			$('#yourls_reset').click(function(e) {
-				yourls.reset();
-				e.preventDefault();
-			});
-			
-			$('#edit-slug-box').append('<span id="yourls-shorturl-button"><a onclick="prompt(\'Short URL:\', \'<?php echo $shorturl; ?>\'); return false;" class="button" href="#">Get Short URL</a></span>');
-			$('#yourls-shorturl-button a').css('border-color','#bbf');
-		})
-
-	})(jQuery);
-	/* ]]> */
-	</script>
-
-	<?php
 }
 
 ?>
