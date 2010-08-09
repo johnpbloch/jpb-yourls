@@ -9,9 +9,10 @@ function wp_ozh_yourls_admin_notice() {
 		$url = menu_page_url( 'ozh_yourls', false );
 		$message = 'Please configure <strong>YOURLS - WordPress to Twitter</strong> <a href="'.$url.'">settings</a> now';
 	}
-	echo <<<NOTICE
+	$notice = <<<NOTICE
 	<div class="error"><p>$message</p></div>
 NOTICE;
+	echo apply_filters( 'ozh_yourls_notice', $notice );
 }
 
 // Add page to menu
@@ -484,7 +485,7 @@ function wp_ozh_yourls_drawbox( $post ) {
 		$promote = "Promote this $type again";
 		echo '<p><em>Note:</em> this post has already been tweeted. Not that there\'s something wrong to promote it again, of course :)</p>';
 	}
-	echo '<p><textarea id="yourls_tweet" rows="1" style="width:100%">'.wp_ozh_yourls_maketweet( $shorturl, $title ).'</textarea></p>
+	echo '<p><textarea id="yourls_tweet" rows="1" style="width:100%">'.wp_ozh_yourls_maketweet( $shorturl, $title, $id ).'</textarea></p>
 	<p style="text-align:right"><input class="button" id="yourls_promote" type="submit" value="'.$action.'" /></p>
 	</div>';
 }

@@ -357,13 +357,13 @@ function wp_ozh_yourls_maketweet( $url, $title, $id ) {
 	$tweet = str_replace('%A', $author_info->display_name, $tweet);
 	
 	// Get tags (up to 3)
-	$_tags = array_slice( get_the_tags( $id ), 0, 3 );
+	$_tags = array_slice( (array)get_the_tags( $id ), 0, 3 );
 	$tags = array();
 	foreach( $_tags as $tag ) { $tags[] = strtolower( $tag->name ); }
 	unset( $_tags );
 
 	// Get categories (up to 3)
-	$_cats = array_slice( get_the_category( $id ), 0, 3 );
+	$_cats = array_slice( (array)get_the_category( $id ), 0, 3 );
 	$cats = array();
 	foreach( $_cats as $cat ) { $cats[] = strtolower( $cat->name ); }
 	unset( $_cats );

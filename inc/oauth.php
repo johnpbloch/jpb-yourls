@@ -6,8 +6,9 @@ function wp_ozh_yourls_oauth_start() {
 
 	if ( wp_ozh_yourls_twitter_keys_empty( 'consumer' ) )
 		return false;
-
-	require_once( dirname(__FILE__).'/oauth_lib/twitterOAuth.php' );
+	
+	if( !class_exists('TwitterOAuth') )
+		require_once( dirname(__FILE__).'/oauth_lib/twitterOAuth.php' );
 
 	$twitter = new TwitterOAuth( $wp_ozh_yourls['consumer_key'], $wp_ozh_yourls['consumer_secret'] );
 	$request = $twitter->getRequestToken();
@@ -35,7 +36,8 @@ function wp_ozh_yourls_oauth_confirm() {
 	if( wp_ozh_yourls_twitter_keys_empty( 'consumer' ) )
 		return false;
 
-	require_once( dirname(__FILE__).'/oauth_lib/twitterOAuth.php' );
+	if( !class_exists('TwitterOAuth') )
+		require_once( dirname(__FILE__).'/oauth_lib/twitterOAuth.php' );
 	
 	$yourls_req_token = $_SESSION['yourls_req_token'] ? $_SESSION['yourls_req_token'] : $wp_ozh_yourls['yourls_req_token'];
 	$yourls_req_secret = $_SESSION['yourls_req_secret'] ? $_SESSION['yourls_req_secret'] : $wp_ozh_yourls['yourls_req_secret'];
@@ -93,7 +95,8 @@ function wp_ozh_yourls_send_request( $url, $args = array(), $type = NULL ) {
 	if( empty($acc_token) or empty($acc_secret) )
 		return false;
 		
-	require_once( dirname(__FILE__).'/oauth_lib/twitterOAuth.php' );
+	if( !class_exists('TwitterOAuth') )
+		require_once( dirname(__FILE__).'/oauth_lib/twitterOAuth.php' );
 
 	$twitter = new TwitterOAuth( $wp_ozh_yourls['consumer_key'], $wp_ozh_yourls['consumer_secret'], $acc_token, $acc_secret );
 	$json = $twitter->OAuthRequest( $url.'.json', $args, $type );
