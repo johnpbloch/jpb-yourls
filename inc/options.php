@@ -301,7 +301,7 @@ function wp_ozh_yourls_do_page() {
 	$blogurl  = get_home_url();
 	$blogname = urlencode( get_bloginfo( 'name' ) );
 	$blogdesc = urlencode( trim( get_bloginfo( 'description' ), '.' ).'. Powered by YOURLS.' );
-	$help_url = $plugin_url."/res/fake_twitter/frame.php?base=$plugin_url&amp;name=YOURLS&amp;org=$blogname&amp;url=$blogurl&amp;desc=$blogdesc&tb_iframe=1&width=600&height=600";
+	$help_url = $plugin_url."/res/fake_twitter/frame.php?base=$plugin_url&amp;name=YOURLS+on+$blogname&amp;org=$blogname&amp;url=$blogurl&amp;desc=$blogdesc&tb_iframe=1&width=600&height=600";
 	?>
 	
 	<div class="div_h3" id="div_h3_twitter">
