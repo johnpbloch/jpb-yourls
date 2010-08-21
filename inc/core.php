@@ -124,7 +124,15 @@ function wp_ozh_yourls_newpost( $post ) {
 	update_post_meta( $post_id, 'yourls_fetching', 1 );
 	
 	$url = get_permalink ( $post_id );
-	$keyword = apply_filters( 'yourls_custom_keyword', '', $post_id );
+	$keyword = '';
+	
+	// Get any suggested keyword
+	if( get_post_meta( $post_id, 'yourls_keyword', true ) ) {
+		$keyword = get_post_meta( $post_id, 'yourls_keyword', true );
+		delete_post_meta( $post_id, 'yourls_keyword' );
+	}
+	
+	$keyword = apply_filters( 'yourls_custom_keyword', $keyword, $post_id );
 	
 	$short = wp_ozh_yourls_get_new_short_url( $url, $post_id, $keyword );
 	
