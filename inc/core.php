@@ -106,8 +106,6 @@ function wp_ozh_yourls_check_yourls() {
 	die('1');	
 }
 
-
-
 // Function called when new post. Expecting post object.
 function wp_ozh_yourls_newpost( $post ) {
 	global $wp_ozh_yourls;
@@ -130,6 +128,9 @@ function wp_ozh_yourls_newpost( $post ) {
 	if( get_post_meta( $post_id, 'yourls_keyword', true ) ) {
 		$keyword = get_post_meta( $post_id, 'yourls_keyword', true );
 		delete_post_meta( $post_id, 'yourls_keyword' );
+	} elseif( get_post_meta( $post_id, 'yourls-keyword', true ) ) {
+		$keyword = get_post_meta( $post_id, 'yourls-keyword', true );
+		delete_post_meta( $post_id, 'yourls-keyword' );
 	}
 	
 	$keyword = apply_filters( 'yourls_custom_keyword', $keyword, $post_id );
