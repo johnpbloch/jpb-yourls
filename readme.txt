@@ -1,4 +1,5 @@
 === YOURLS: WordPress to Twitter ===
+Contributors: ozh
 Donate link: http://planetozh.com/exit/donate
 Tags: ozh, twitter, yourls, tinyurl, isgd, is.gd, bitly, bit.ly, short url, url shortener, oauth
 Requires at least: 3.0
