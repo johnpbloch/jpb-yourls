@@ -477,28 +477,39 @@ function wp_ozh_yourls_plugin_actions($links) {
 }
 
 // Shortcut to WP function wp_get_shortlink. First parameter passed by filter, $id is post id
-function wp_ozh_yourls_wp_get_shortlink( $false, $id ) {
-	if( !$id ) {
-		global $wp_query;
-		$id = $wp_query->get_queried_object_id();
-	}
-	$type = get_post_type( $id );
+function wp_ozh_yourls_wp_get_shortlink( $false, $id, $context = '' ) {
 	
-	// No ID ? Return nothing (not generating a short URL for home URL. I think that's silly?)
-	if( !$id )
+	global $wp_query;
+	$post_id = 0;
+	if ( 'query' == $context && is_single() ) {
+		$post_id = $wp_query->get_queried_object_id();
+	} elseif ( 'post' == $context ) {
+		$post = get_post($id);
+		$post_id = $post->ID;
+	}
+	
+	// No ID and still post? Fail.
+	if( !$post_id && $context == 'post' )
+		return null;
+	
+	// TODO: Generate shortlinks for things other than posts
+	if( !$post_id && $context == 'query' ) 
 		return null;
 	
 	// Check if user wants a short link generated for this type of post
+	$type = get_post_type( $post_id );
 	if( !wp_ozh_yourls_generate_on( $type ) )
 		return null;
 		
 	// Check if this post is published
-	if( 'publish' != get_post_status( $id ) )
+	if( 'publish' != get_post_status( $post_id ) )
 		return null;
 
 	// Still here? Must mean we really need a short URL then!
-	return wp_ozh_yourls_geturl( $id );
+	return wp_ozh_yourls_geturl( $post_id );
 }
+
+
 
 
 

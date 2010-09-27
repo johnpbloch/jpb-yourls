@@ -5,7 +5,7 @@ Plugin URI: http://planetozh.com/blog/my-projects/yourls-wordpress-to-twitter-a-
 Description: Create short URLs for posts with <a href="http://yourls.org/" title="Your Own URL Shortener">YOURLS</a> (or other services such as bit.ly) and tweet them.
 Author: Ozh
 Author URI: http:/ozh.org/
-Version: 1.4.4
+Version: 1.4.5
 */
 
 /* Release History :
@@ -38,6 +38,7 @@ Version: 1.4.4
  * 1.4.2:     Fixed: Application name on Twitter was not unique
  * 1.4.3:     Added: Built-in support for custom keyword with post custom field 'yourls-keyword'
  * 1.4.4:     Added: Both 'yourls-keyword' and 'yourls_keyword'
+ * 1.4.5:     Fixed: Possible wrong shorturl when not on singular pages. Thanks Otto for the fix!
  */
 
 /********************* DO NOT EDIT *********************/
@@ -141,5 +142,5 @@ add_action('pending_to_publish', 'wp_ozh_yourls_newpost', 10, 1);
 add_action('future_to_publish', 'wp_ozh_yourls_newpost', 10, 1);
 
 // Shortcut internal shortlink functions
-add_filter( 'pre_get_shortlink', 'wp_ozh_yourls_wp_get_shortlink', 10, 2 );
+add_filter( 'pre_get_shortlink', 'wp_ozh_yourls_wp_get_shortlink', 10, 3 );
 
