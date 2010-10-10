@@ -127,7 +127,7 @@ function wp_ozh_yourls_twitter_check() {
 
 // Display either connect button or Twitter infos
 function wp_ozh_yourls_twitter_button_or_infos() {
-	$plugin_url = WP_PLUGIN_URL.'/'.plugin_basename( dirname(dirname(__FILE__)) );
+	$plugin_url = wp_ozh_yourls_pluginurl();
 	
 	// wrong keys: wp_ozh_yourls_get_twitter_screen_name() === false && 
 
@@ -177,7 +177,7 @@ function wp_ozh_yourls_get_connect_link( $action='', $type='authenticate', $imag
 // Check authentication
 function wp_ozh_yourls_get_auth_infos( $refresh = false ) {
 	if( isset( $_SESSION['yourls_credentials'] ) && $_SESSION['yourls_credentials'] && !$refresh )
-		return $_SESSION['yourls_credentials']; 
+		return $_SESSION['yourls_credentials'];
 	
 	$_SESSION['yourls_credentials'] = wp_ozh_yourls_send_request( 'http://twitter.com/account/verify_credentials' );
 	

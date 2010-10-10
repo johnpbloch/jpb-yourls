@@ -29,3 +29,8 @@ span.mandatory { color:red; }
 
 a.twitter_profile {text-decoration:none;}
 a.twitter_profile img {vertical-align:-32px; padding:1px 5px;}
+
+#appdetails {
+	list-style-type:disc;
+	margin-left:30px;
+}

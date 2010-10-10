@@ -10,23 +10,6 @@ jQuery(document).ready(function($){
 		.append(' (click to view)')
 		.click(function(){$('#advanced_template').toggle(500);});
 	
-	
-	// Check for Consumer key & secret info
-	$('#consumer_key').change(function(){ check_keys(); });
-	$('#consumer_secret').change(function(){ check_keys(); });
-	$('#consumer_secret').click(function(){ check_keys(); });
-	var yoursl_check_timer = 0;
-
-	function check_keys() {
-		if( !$('#consumer_key').val() || !$('#consumer_secret').val() ) {
-			return;
-		}
-		if( yoursl_check_timer ) {
-			clearTimeout ( yoursl_check_timer );
-		}
-		yoursl_check_timer = setTimeout ( "update_key_msg()", 1000 );
-	}
-	
 	// Toggle setting sections
 	$('.h3_toggle').click(function(){
 		var target = 'div_'+$(this).attr('id');
@@ -62,7 +45,7 @@ jQuery(document).ready(function($){
 	// Password reveal: create the checkboxes
 	$('input:password').each(function(){
 		var target = $(this).attr('id');
-		$(this).after('&nbsp;<label><input type="checkbox" class="y_reveal" id="y_reveal_'+target+'> Show letters</label>');
+		$(this).after('&nbsp;<label><input type="checkbox" class="y_reveal" id="y_reveal_'+target+'"/> Show letters</label>');
 		$('#y_reveal_'+target).data('target', target)
 	});
 	
@@ -82,7 +65,8 @@ jQuery(document).ready(function($){
 	function password_toggle(target, display) {
 		if (display) {
 			var pw = $('#'+target).val();
-			$('#'+target).hide().after('<input type="text" name="'+target+'_text__" value="'+pw+'" id="'+target+'_text__"/>');
+			var size = $('#'+target).attr('size');
+			$('#'+target).hide().after('<input type="text" name="'+target+'_text__" value="'+pw+'" size="'+size+'" id="'+target+'_text__"/>');
 		} else {
 			var pw = $('#'+target+'_text__').val();
 			$('#'+target).show().val(pw);
@@ -190,8 +174,4 @@ function toggle_ok_notok( el, status ) {
 	} else {
 		toggle_not_ok( el );
 	}
-}
-
-function update_key_msg() {
-	jQuery('#yourls_now_connect').text( 'Now press "Save Changes". If these information look correct, here will be a "Sign in with Twitter" button' );
 }

@@ -118,9 +118,6 @@ function wp_ozh_yourls_newpost( $post ) {
 		return;
 	}
 	
-	// Mark this post as "I'm currently fetching the page to get its title"
-	update_post_meta( $post_id, 'yourls_fetching', 1 );
-	
 	$url = get_permalink ( $post_id );
 	$keyword = '';
 	
@@ -137,9 +134,6 @@ function wp_ozh_yourls_newpost( $post ) {
 	
 	$short = wp_ozh_yourls_get_new_short_url( $url, $post_id, $keyword );
 	
-	// Remove fetching flag
-	delete_post_meta( $post_id, 'yourls_fetching' );
-
 	// Tweet short URL ?
 	if ( !wp_ozh_yourls_tweet_on( $post->post_type ) ) {
 		return;
@@ -170,8 +164,18 @@ function wp_ozh_yourls_get_new_short_url( $url, $post_id = 0, $keyword = '', $ti
 	if( !$service )
 		return 'Plugin not configured: cannot find which URL shortening service to use';
 
+	// Mark this post as "I'm currently fetching the page to get its title"
+	if( $post_id ) {
+		update_post_meta( $post_id, 'yourls_fetching', 1 );
+		update_post_meta( $post_id, 'yourls_shorturl', '' ); // temporary empty title to avoid loop on creating short URL
+	}
+	
 	// Get short URL
 	$shorturl = wp_ozh_yourls_api_call( $service, $url, $keyword, $title );
+	
+	// Remove fetching flag
+	if( $post_id )
+		delete_post_meta( $post_id, 'yourls_fetching' );
 
 	// Store short URL in a custom field
 	if ( $post_id && $shorturl )
@@ -424,8 +428,6 @@ function wp_ozh_yourls_admin_init() {
 	global $wp_ozh_yourls;
 	$wp_ozh_yourls = get_option('ozh_yourls');
 
-	require_once( dirname(__FILE__).'/oauth.php' );
-
 	register_setting( 'wp_ozh_yourls_options', 'ozh_yourls', 'wp_ozh_yourls_sanitize' );
 
 	if ( !wp_ozh_yourls_settings_are_ok() ) {
@@ -466,8 +468,8 @@ function wp_ozh_yourls_service() {
 }
 
 // Hooked into 'ozh_adminmenu_icon', this function give this plugin its own icon
-function wp_ozh_yourls_customicon($in) {
-	return WP_PLUGIN_URL.'/'.plugin_basename(dirname(dirname(__FILE__))).'/res/icon.gif';
+function wp_ozh_yourls_customicon( $in ) {
+	return wp_ozh_yourls_pluginurl().'res/icon.gif';
 }
 
 // Add the 'Settings' link to the plugin page
@@ -509,7 +511,8 @@ function wp_ozh_yourls_wp_get_shortlink( $false, $id, $context = '' ) {
 	return wp_ozh_yourls_geturl( $post_id );
 }
 
-
-
-
+// Return plugin URL (https://site.com/wp-content/plugins/bleh/)
+function wp_ozh_yourls_pluginurl() {
+	return plugin_dir_url( dirname(__FILE__) );
+}
 

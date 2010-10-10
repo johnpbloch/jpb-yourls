@@ -31,10 +31,10 @@ function wp_ozh_yourls_add_page() {
 // Add style & JS on the plugin page
 function wp_ozh_yourls_add_css_js_plugin() {
 	add_thickbox();
-	$plugin_url = WP_PLUGIN_URL.'/'.plugin_basename( dirname(dirname(__FILE__)) );
-	wp_enqueue_script('yourls_js', $plugin_url.'/res/yourls.js');
+	$plugin_url = wp_ozh_yourls_pluginurl();
+	wp_enqueue_script('yourls_js', $plugin_url.'res/yourls.js');
 	wp_enqueue_script('wp-ajax-response');
-	wp_enqueue_style('yourls_css', $plugin_url.'/res/yourls.css');
+	wp_enqueue_style('yourls_css', $plugin_url.'res/yourls.css');
 }
 
 // Add style & JS on the Post/Page Edit page
@@ -42,9 +42,9 @@ function wp_ozh_yourls_add_css_js_post() {
 	global $pagenow;
 	$current = str_replace( array('-new.php', '.php'), '', $pagenow);
 	if ( wp_ozh_yourls_generate_on($current) ) {
-		$plugin_url = WP_PLUGIN_URL.'/'.plugin_basename( dirname(dirname(__FILE__)) );
-		wp_enqueue_script('yourls_js', $plugin_url.'/res/post.js');
-		wp_enqueue_style('yourls_css', $plugin_url.'/res/post.css');
+		$plugin_url = wp_ozh_yourls_pluginurl();
+		wp_enqueue_script('yourls_js', $plugin_url.'res/post.js');
+		wp_enqueue_style('yourls_css', $plugin_url.'res/post.css');
 	}
 }
 
@@ -63,12 +63,9 @@ function wp_ozh_yourls_sanitize( $in ) {
 	}
 	
 	// Twitter keys
-	$in['consumer_key'] = wp_ozh_yourls_validate_key( $in['consumer_key'] );
-	$in['consumer_secret'] = wp_ozh_yourls_validate_key( $in['consumer_secret'] );
-	
-	// Keep options that are not set via form
-	$in['yourls_acc_token']  = $wp_ozh_yourls['yourls_acc_token'];
-	$in['yourls_acc_secret'] = $wp_ozh_yourls['yourls_acc_secret'];
+	foreach( array( 'consumer_key', 'consumer_secret', 'yourls_acc_token', 'yourls_acc_secret' ) as $key ) {
+		$in[$key] = wp_ozh_yourls_validate_key( $in[$key] );
+	}
 	
 	return $in;
 }
@@ -76,7 +73,7 @@ function wp_ozh_yourls_sanitize( $in ) {
 // Validate Twitter keys
 function wp_ozh_yourls_validate_key( $key ) {
 	$key = trim( $key );
-	if( !preg_match('/^[A-Za-z0-9]+$/', $key) )
+	if( !preg_match('/^[A-Za-z0-9-_]+$/', $key) )
 		  $key = '';
 	return $key;
 }
@@ -91,8 +88,9 @@ OOPS;
 // Check if plugin seems configured. Param: 'overall' return one single bool, otherwise return details
 function wp_ozh_yourls_settings_are_ok( $check = 'overall' ) {
 	global $wp_ozh_yourls;
-	
+
 	$check_twitter   = ( wp_ozh_yourls_twitter_keys_empty() ? false : true );
+	$check_twitter   = ( $check_twitter && ( wp_ozh_yourls_twitter_check() === true ) );
 	$check_yourls    = ( isset( $wp_ozh_yourls['service'] ) && !empty( $wp_ozh_yourls['service'] ) ? true : false );
 	$check_wordpress = ( isset( $wp_ozh_yourls['twitter_message'] ) && !empty( $wp_ozh_yourls['twitter_message'] ) ? true : false );
 	
@@ -151,7 +149,7 @@ function wp_ozh_yourls_session_destroy() {
 
 // Draw the option page
 function wp_ozh_yourls_do_page() {
-	$plugin_url = WP_PLUGIN_URL.'/'.plugin_basename( dirname(dirname(__FILE__)) );
+	$plugin_url = wp_ozh_yourls_pluginurl();
 	
 	$ozh_yourls = get_option('ozh_yourls'); 
 	
@@ -190,6 +188,7 @@ function wp_ozh_yourls_do_page() {
 	
 	<?php /** ?>
 	<pre><?php print_r(get_option('ozh_yourls')); ?></pre>
+	<pre><?php print_r($_SESSION); ?></pre>
 	<?php /**/ ?>
 
 	<div class="icon32" id="icon-plugins"><br/></div>
@@ -237,13 +236,13 @@ function wp_ozh_yourls_do_page() {
 		<?php $hidden = ( $ozh_yourls['location'] == 'local' ? '' : 'y_hidden' ) ; ?>
 		<div id="y_show_local" class="<?php echo $hidden; ?> y_location y_level3">
 			<label for="y_path">Path to YOURLS <tt>config.php</tt></label> <input type="text" class="y_longfield" id="y_path" name="ozh_yourls[yourls_path]" value="<?php echo $ozh_yourls['yourls_path']; ?>"/> <span id="check_path" class="yourls_check button">check</span><br/>
-			<em>Example: <tt>/home/you/site.com/yourls/includes/config.php</tt></em>
+			<em>Example:</em> <tt>/home/you/site.com/yourls/includes/config.php</tt>
 		</div>
 		
 		<?php $hidden = ( $ozh_yourls['location'] == 'remote' ? '' : 'y_hidden' ) ; ?>
 		<div id="y_show_remote" class="<?php echo $hidden; ?> y_location y_level3">
 			<label for="y_url">URL to the YOURLS API</label> <input type="text" id="y_url" class="y_longfield" name="ozh_yourls[yourls_url]" value="<?php echo $ozh_yourls['yourls_url']; ?>"/> <span id="check_url" class="yourls_check button">check</span><br/>
-			<em>Example: <tt>http://site.com/yourls-api.php</tt></em><br/>
+			<em>Example:</em> <tt>http://site.com/yourls-api.php</tt><br/>
 			<label for="y_yourls_login">YOURLS Login</label> <input type="text" id="y_yourls_login" name="ozh_yourls[yourls_login]" value="<?php echo $ozh_yourls['yourls_login']; ?>"/><br/>
 			<label for="y_yourls_passwd">YOURLS Password</label> <input type="password" id="y_yourls_passwd" name="ozh_yourls[yourls_password]" value="<?php echo $ozh_yourls['yourls_password']; ?>"/><br/>
 		</div>
@@ -301,34 +300,52 @@ function wp_ozh_yourls_do_page() {
 	$blogurl  = get_home_url();
 	$blogname = urlencode( get_bloginfo( 'name' ) );
 	$blogdesc = urlencode( trim( get_bloginfo( 'description' ), '.' ).'. Powered by YOURLS.' );
-	$help_url = $plugin_url."/res/fake_twitter/frame.php?base=$plugin_url&amp;name=YOURLS+on+$blogname&amp;org=$blogname&amp;url=$blogurl&amp;desc=$blogdesc&tb_iframe=1&width=600&height=600";
+	$help_url = $plugin_url."res/help.jpg?tb_iframe=1&width=677&height=608";
 	?>
 	
 	<div class="div_h3" id="div_h3_twitter">
-	<p>To connect your site to Twitter, you need to register your blog as a <strong>Twitter Application</strong> and get a <strong>Consumer Key</strong> and <strong>Consumer Secret</strong>.</p>
-	<p>Already registered? Find your keys on <a href="http://twitter.com/apps">Twitter Application List</a></p>
-	<p>Need to register? Head to <a id="twitter_new_app" href="http://twitter.com/apps/new">Twitter: Register an Application</a> and fill the form as <a href="<?php echo $help_url; ?>" class="thickbox">in this help screen</a></p>
+	<p>To connect your site to Twitter, you need to register your blog as a <strong>Twitter Application</strong> and get a <strong>Consumer Key</strong>, a <strong>Consumer Secret</strong>, an <strong>Access Token</strong> and an <strong>Access Token Secret</strong>. Phew. Complicated? Blame Twitter :)</p>
+	<p>Already registered? Find your keys on <a href="http://dev.twitter.com/apps">Twitter Application List</a></p>
+	<p>Need to register? <a href="http://dev.twitter.com/apps/new">Register an Application</a> and fill the form as <a title="Register your app like this" href="<?php echo $help_url; ?>" class="thickbox">in this help screen</a> to get your keys and tokens</p>
+	<ul id="appdetails">
+		<li>Set <strong>Application Type</strong> to <strong>Browser</strong></li>
+		<li>Set <strong>Callback URL</strong> to <strong><?php echo $blogurl; ?></strong></li>
+		<li>Set <strong>Default Access type</strong> to <strong>Read &amp; Write</strong></li>
+	</ul>
 
 	<table class="form-table">
 
 	<tr valign="top">
-	<th scope="row">Twitter Consumer Key<span class="mandatory">*</span></th>
-	<td><input id="consumer_key" name="ozh_yourls[consumer_key]" type="text" size="50" value="<?php echo $ozh_yourls['consumer_key']; ?>"/></td>
+	<th scope="row">Consumer Key<span class="mandatory">*</span></th>
+	<td><input id="consumer_key" name="ozh_yourls[consumer_key]" type="password" size="50" value="<?php echo $ozh_yourls['consumer_key']; ?>"/></td>
 	</tr>
 
 	<tr valign="top">
-	<th scope="row">Twitter Consumer Secret<span class="mandatory">*</span></th>
-	<td><input id="consumer_secret" name="ozh_yourls[consumer_secret]" type="text" size="50" value="<?php echo $ozh_yourls['consumer_secret']; ?>"/></td>
+	<th scope="row">Consumer Secret<span class="mandatory">*</span></th>
+	<td><input id="consumer_secret" name="ozh_yourls[consumer_secret]" type="password" size="50" value="<?php echo $ozh_yourls['consumer_secret']; ?>"/></td>
 	</tr>
 	
+	<tr valign="top"><td colspan="2"><p>On the right hand column of your application page, click on 'My Access Token' for the following values:</p></td></tr>
+
+	<tr valign="top">
+	<th scope="row">Access Token<span class="mandatory">*</span></th>
+	<td><input id="yourls_acc_token" name="ozh_yourls[yourls_acc_token]" type="password" size="50" value="<?php echo $ozh_yourls['yourls_acc_token']; ?>"/></td>
+	</tr>
+	
+	<tr valign="top">
+	<th scope="row">Access Token Secret<span class="mandatory">*</span></th>
+	<td><input id="yourls_acc_secret" name="ozh_yourls[yourls_acc_secret]" type="password" size="50" value="<?php echo $ozh_yourls['yourls_acc_secret']; ?>"/></td>
+	</tr>
+	
+	<tr>
 	<td colspan="2" id="yourls_twitter_infos">
-	<span id="yourls_now_connect"></span>
 	<?php
-	if( !wp_ozh_yourls_twitter_keys_empty( 'consumer' ) ) {
+	if( !wp_ozh_yourls_twitter_keys_empty() ) {
 		wp_ozh_yourls_twitter_button_or_infos(); // in oauth.php
 	}
 	?>
 	</td>
+	</tr>
 	
 	</table>
 	
@@ -389,13 +406,12 @@ function wp_ozh_yourls_do_page() {
 			<li><b><tt>%A{something}</tt></b>: author's 'something' as stored in the database. Example: %A{first_name}. See <a href="http://codex.wordpress.org/Function_Reference/get_userdata">get_userdata()</a>.</li>
 			<li><b><tt>%F{something}</tt></b>: custom post field 'something'. See <a href="http://codex.wordpress.org/Function_Reference/get_post_meta">get_post_meta()</a>.</li>
 			<li><b><tt>%L</tt></b>: tags as plaintext and lowercase (space separated if more than one, up to 3 tags)</li>
-			<li><b><tt>%H</tt></b>: tags as hashtags and lowercase (space separated if more than one, up to 3 tags)</li>
+			<li><b><tt>%H</tt></b>: tags as #hashtags and lowercase (space separated if more than one, up to 3 tags)</li>
 			<li><b><tt>%C</tt></b>: categories as plaintext and lowercase (space separated if more than one, up to 3 categories)</li>
-			<li><b><tt>%D</tt></b>: categories as hashtags and lowercase (space separated if more than one, up to 3 categories)</li>
+			<li><b><tt>%D</tt></b>: categories as #hashtags and lowercase (space separated if more than one, up to 3 categories)</li>
 		</ul>
 		Remember that you only have 140 characters! The title will be added last, so if you put too many tokens like hashtags and stuff, the title might get trimmed hard!
 	</div>
-	</td>
 	</td>
 	</tr>
 
