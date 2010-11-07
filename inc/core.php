@@ -110,6 +110,8 @@ function wp_ozh_yourls_check_yourls() {
 function wp_ozh_yourls_newpost( $post ) {
 	global $wp_ozh_yourls;
 	
+	do_action( 'yourls_newpost' );
+	
 	$post_id = $post->ID;
 	$url = get_permalink( $post_id );
 	
@@ -151,6 +153,9 @@ function wp_ozh_yourls_newpost( $post ) {
 // Tweet something. Returns stuff.
 function wp_ozh_yourls_send_tweet( $tweet ) {
 	global $wp_ozh_yourls;
+	
+	do_action( 'yourls_send_tweet', $tweet );
+	
 	require_once( dirname(__FILE__) . '/oauth.php' );
 	return wp_ozh_yourls_tweet_it( $tweet );
 }
@@ -158,6 +163,8 @@ function wp_ozh_yourls_send_tweet( $tweet ) {
 // The WP <-> YOURLS bridge function: get short URL of a WP post. Returns string(url)
 function wp_ozh_yourls_get_new_short_url( $url, $post_id = 0, $keyword = '', $title = '' ) {
 	global $wp_ozh_yourls;
+	
+	do_action( 'yourls_get_new_short_url', $url, $post_id, $keyword, $title );
 	
 	// Check plugin is configured
 	$service = wp_ozh_yourls_service();
