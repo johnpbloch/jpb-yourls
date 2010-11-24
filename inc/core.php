@@ -132,6 +132,7 @@ function wp_ozh_yourls_newpost( $post ) {
 		delete_post_meta( $post_id, 'yourls-keyword' );
 	}
 	
+	$url = apply_filters( 'yourls_custom_url', $url, $post_id );
 	$keyword = apply_filters( 'yourls_custom_keyword', $keyword, $post_id );
 	
 	$short = wp_ozh_yourls_get_new_short_url( $url, $post_id, $keyword );

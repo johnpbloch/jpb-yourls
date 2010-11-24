@@ -44,6 +44,7 @@ Version: 1.4.7
 			  Fixed: the "Show letters" toggable password fields on Chrome
 			  Fixed: ressource now loaded in compliance with SSL pref
  * 1.4.7:     Added: More actions and filters
+ * 1.4.8:     Added: More actions and filters
  */
 
 /********************* DO NOT EDIT *********************/
