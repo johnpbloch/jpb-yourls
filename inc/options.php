@@ -429,7 +429,7 @@ function wp_ozh_yourls_do_page() {
 	<?php echo "<a href='$reset' id='reset-yourls' class='submitdelete'>Reset</a> all settings"; ?>
 	</p>
 	
-	<p><small><span class="mandatory">*</span> denotes a mandatory field. Click on the <img src="<?php echo $plugin_url; ?>/res/expand.png" /> to expand a setting section. </small></p>
+	<p><small><span class="mandatory">*</span> denotes a mandatory field. A green check<img src="<?php echo $plugin_url; ?>/res/accept.png" /> indicates the section main parameters are <em>filled</em>, not necessarily <em>correct</em>. Click on the <img src="<?php echo $plugin_url; ?>/res/expand.png" /> to expand a setting section. </small></p>
 
 	</form>
 

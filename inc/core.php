@@ -311,10 +311,7 @@ function wp_ozh_yourls_remote_simple( $url ) {
 // Poke a remote API with JSON and return a object (decoded JSON) or NULL if error
 function wp_ozh_yourls_remote_json( $url ) {
 	$input = wp_ozh_yourls_fetch_url( $url );
-	if ( !class_exists( 'Services_JSON' ) )
-		require_once(dirname(__FILE__).'/pear_json.php');
-	$json = new Services_JSON();
-	$obj = $json->decode($input);
+	$obj = json_decode($input);
 	return $obj;
 	// TODO: some error handling ?
 }

@@ -5,7 +5,7 @@ Plugin URI: http://planetozh.com/blog/my-projects/yourls-wordpress-to-twitter-a-
 Description: Create short URLs for posts with <a href="http://yourls.org/" title="Your Own URL Shortener">YOURLS</a> (or other services such as bit.ly) and tweet them.
 Author: Ozh
 Author URI: http:/ozh.org/
-Version: 1.4.8
+Version: 1.4.9
 */
 
 /* Release History :
@@ -45,6 +45,8 @@ Version: 1.4.8
 			  Fixed: ressource now loaded in compliance with SSL pref
  * 1.4.7:     Added: More actions and filters
  * 1.4.8:     Added: More actions and filters
+ * 1.4.9:     Removed: JavaScript bits on the options page, causing passwords to reset
+              Removed: Unneeded JSON class
  */
 
 /********************* DO NOT EDIT *********************/
