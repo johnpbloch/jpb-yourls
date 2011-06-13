@@ -188,7 +188,7 @@ function wp_ozh_yourls_get_auth_infos( $refresh = false ) {
 function wp_ozh_yourls_get_twitter_screen_name() {
 	$infos = wp_ozh_yourls_get_auth_infos();
 		
-	if( $infos->screen_name )
+	if( isset( $infos->screen_name ) )
 			return $infos->screen_name;
 			
 	return false;

@@ -363,16 +363,19 @@ function wp_ozh_yourls_do_page() {
 	<?php
 	$types = get_post_types( array('publicly_queryable' => 1 ), 'objects' );
 	foreach( $types as $type=>$object ) {
-		$name = $object->labels->singular_name
+		$name = $object->labels->singular_name;
+		$generate_checked = isset( $ozh_yourls['generate_on_' . $type] ) && 1 == $ozh_yourls['generate_on_' . $type] ? 1 : 0;	
+		$tweet_checked = isset( $ozh_yourls['tweet_on_' . $type] ) && 1 == $ozh_yourls['tweet_on_' . $type] ? 1 : 0;
+		
 		?>
 		<tr valign="top">
 		<th scope="row">New <strong><?php echo $name; ?></strong> published</th>
 		<td>
-		<input class="y_toggle" id="generate_on_<?php echo $type; ?>" name="ozh_yourls[generate_on_<?php echo $type; ?>]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['generate_on_'.$type] ); ?> /><label for="generate_on_<?php echo $type; ?>"> Generate short URL</label><br/>
-		<?php $hidden = ( $ozh_yourls['generate_on_'.$type] == '1' ? '' : 'y_hidden' ) ; ?>
+		<input class="y_toggle" id="generate_on_<?php echo $type; ?>" name="ozh_yourls[generate_on_<?php echo $type; ?>]" type="checkbox" value="1" <?php checked( '1', $generate_checked ); ?> /><label for="generate_on_<?php echo $type; ?>"> Generate short URL</label><br/>
+		<?php $hidden = ( $generate_checked == '1' ? '' : 'y_hidden' ) ; ?>
 		<?php if( $type != 'attachment' ) { ?>
 		<div id="y_show_generate_on_<?php echo $type; ?>" class="<?php echo $hidden; ?> generate_on_<?php echo $type; ?>">
-			<input id="tweet_on_<?php echo $type; ?>" name="ozh_yourls[tweet_on_<?php echo $type; ?>]" type="checkbox" value="1" <?php checked( '1', $ozh_yourls['tweet_on_'.$type] ); ?> /><label for="tweet_on_<?php echo $type; ?>"> Send a tweet with the short URL</label>
+			<input id="tweet_on_<?php echo $type; ?>" name="ozh_yourls[tweet_on_<?php echo $type; ?>]" type="checkbox" value="1" <?php checked( '1', $tweet_checked ) ?> /><label for="tweet_on_<?php echo $type; ?>"> Send a tweet with the short URL</label>
 		</div>
 		<?php } ?>
 		</td>
@@ -456,6 +459,8 @@ function wp_ozh_yourls_drawbox( $post ) {
 	$id = $post->ID;
 	$title = $post->post_title;
 	
+	$account = wp_ozh_yourls_get_twitter_screen_name();
+	
 	// Too early, young Padawan
 	if ( $status != 'publish' ) {
 		echo '<p>Depending on <a href="options-general.php?page=ozh_yourls">configuration</a>, a short URL will be generated and/or a tweet will be sent.</p>';
@@ -463,6 +468,7 @@ function wp_ozh_yourls_drawbox( $post ) {
 	}
 	
 	$shorturl = wp_ozh_yourls_geturl( $id );
+	
 	// Bummer, could not generate a short URL
 	if ( !$shorturl ) {
 		echo '<p>Bleh. The URL shortening service you configured could not be reached as of now. This might be a temporary problem, please try again later!</p>';
@@ -492,7 +498,6 @@ function wp_ozh_yourls_drawbox( $post ) {
 	$action = 'Tweet this';
 	$promote = "Promote this $type";
 	$tweeted = get_post_meta( $id, 'yourls_tweeted', true );
-	$account = wp_ozh_yourls_get_twitter_screen_name();
 
 	echo '<p><strong>'.$promote.' on <a href="http://twitter.com/'.$account.'">@'.$account.'</a>: </strong></p>
 	<div id="yourls-promote">';

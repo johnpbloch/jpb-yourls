@@ -520,4 +520,3 @@ function wp_ozh_yourls_wp_get_shortlink( $false, $id, $context = '' ) {
 function wp_ozh_yourls_pluginurl() {
 	return plugin_dir_url( dirname(__FILE__) );
 }
-
