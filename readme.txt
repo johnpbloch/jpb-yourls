@@ -4,7 +4,7 @@ Donate link: http://planetozh.com/exit/donate
 Tags: ozh, twitter, yourls, tinyurl, isgd, is.gd, bitly, bit.ly, short url, url shortener, oauth, buddypress
 Requires at least: 3.0
 Tested up to: 9.9
-Stable tag: trunk
+Stable tag: 1.4.9
 
 Use YOURLS (a free GPL URL shortener service) or another public service (tinyURL...) to create short URL of your posts and tweet them
 
