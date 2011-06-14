@@ -24,7 +24,7 @@ function wp_ozh_yourls_create_bp_member_url( $user_id, $type = 'normal', $keywor
 	} else {
 		$keyword = false;
 	}
-	var_dump( $keyword );
+	
 	// Get short URL
 	$shorturl = wp_ozh_yourls_api_call( $service, $url, $keyword, $title );
 	
