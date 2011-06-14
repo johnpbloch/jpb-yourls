@@ -115,6 +115,12 @@ function wp_ozh_yourls_geturl( $id ) {
 	return $short;
 }
 
+// Load BuddyPress functions if BP is active
+function wp_ozh_yourls_load_bp_functions() {
+	require_once( dirname( __FILE__ ) . '/inc/buddypress/bp-integration.php' ); 
+}
+add_action( 'bp_include', 'wp_ozh_yourls_load_bp_functions' );
+
 /************************ HOOKS ************************/
 
 // Check PHP 5 on activation and upgrade settings

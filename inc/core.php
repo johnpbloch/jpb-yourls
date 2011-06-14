@@ -254,10 +254,12 @@ function wp_ozh_yourls_api_call( $api, $url, $keyword = '', $title = '' ) {
 				'source'   => 'plugin',
 				'action'   => 'shorturl'
 			);
+			$params = apply_filters( 'yourls_remote_params', $params );
 			$api_url = add_query_arg( $params, $wp_ozh_yourls['yourls_url'] );
+			
 			$json = wp_ozh_yourls_remote_json( $api_url );			
 			if ( $json )
-				$shorturl = $json->shorturl;
+				$shorturl = isset( $json->shorturl ) ? $json->shorturl : '';
 			break;
 		
 		case 'bitly':
@@ -302,6 +304,65 @@ function wp_ozh_yourls_api_call( $api, $url, $keyword = '', $title = '' ) {
 	return $shorturl;
 }
 
+/**
+ * Get the expanded version of a short url
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ *
+ * @param str $api Shortener type
+ * @param str $url The URL to be expanded
+ * @return mixed $expanded_url
+ */
+function wp_ozh_yourls_api_call_expand( $api, $url ) {
+	global $wp_ozh_yourls;
+
+	switch( $api ) {
+
+		case 'yourls-local':
+			global $yourls_reserved_URL;
+			if( !defined('YOURLS_FLOOD_DELAY_SECONDS') )
+				define('YOURLS_FLOOD_DELAY_SECONDS', 0); // Disable flood check
+			if( !defined('YOURLS_UNIQUE_URLS') && ( !defined('YOURLS_ALWAYS_FRESH') || YOURLS_ALWAYS_FRESH != true ) )
+				define('YOURLS_UNIQUE_URLS', true); // Don't duplicate long URLs
+
+			$include = wp_ozh_yourls_find_yourls_loader();
+			if( !$include ) {
+				add_action( 'admin_notices', create_function('', 'echo \'<div id="message" class="error"><p>Cannot find YOURLS. Please check your config.</p></div>\';') );
+				break;
+			}
+			
+			global $ydb;
+			require_once( $include ); 
+			$yourls_result = yourls_add_new_link( $url, $keyword, $title );
+
+			if ($yourls_result)
+				$shorturl = $yourls_result['shorturl'];
+			break;
+			
+		case 'yourls-remote':
+			$params = array(
+				'username' => $wp_ozh_yourls['yourls_login'],
+				'password' => $wp_ozh_yourls['yourls_password'],
+				'shorturl' => urlencode( $url ),
+				'format'   => 'json',
+				'source'   => 'plugin',
+				'action'   => 'expand'
+			);
+			
+			$api_url = add_query_arg( $params, $wp_ozh_yourls['yourls_url'] );
+
+			$api = wp_ozh_yourls_remote_json( $api_url );	
+
+			break;
+	
+		default:
+			die('Error, unknown service');
+	
+	}
+	
+	return $api;
+}
 
 // Poke a remote API that returns a simple string
 function wp_ozh_yourls_remote_simple( $url ) {
@@ -519,4 +580,32 @@ function wp_ozh_yourls_wp_get_shortlink( $false, $id, $context = '' ) {
 // Return plugin URL (https://site.com/wp-content/plugins/bleh/)
 function wp_ozh_yourls_pluginurl() {
 	return plugin_dir_url( dirname(__FILE__) );
+}
+
+/**
+ * Guesses the base URL of your chosen shortener
+ */
+function wp_ozh_yourls_guess_base_url() {
+	$ozh_yourls = get_option('ozh_yourls');
+	
+	if ( empty( $ozh_yourls['service'] ) )
+		return false;
+	
+	switch ( $ozh_yourls['service'] ) {
+		case 'yourls' :
+			if ( 'remote' == $ozh_yourls['location'] ) {			
+				$url = preg_replace( '|https?://(.*?)/yourls\-api\.php|', '$1', $ozh_yourls['yourls_url'] );
+			}
+			break;
+	}
+	
+	return $url;
+}
+
+function wp_ozh_yourls_service_allows_custom_urls() {
+	$service = wp_ozh_yourls_service();
+	
+	$customizable = apply_filters( 'wp_ozh_yourls_customizable_services', array( 'yourls-remote', 'yourls-local' ) );
+	
+	return in_array( $service, $customizable );
 }

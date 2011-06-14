@@ -422,6 +422,8 @@ function wp_ozh_yourls_do_page() {
 	
 	</div> <!-- div_h3_wordpress -->
 	
+	<?php do_action( 'ozh_yourls_admin_sections' ) ?>
+	
 	<?php
 	$reset = add_query_arg( array('action' => 'reset'), menu_page_url( 'ozh_yourls', false ) );
 	$reset = wp_nonce_url( $reset, 'reset-yourls' );
