@@ -67,6 +67,9 @@ function wp_ozh_yourls_sanitize( $in ) {
 		$in[$key] = wp_ozh_yourls_validate_key( $in[$key] );
 	}
 	
+	// Get the shortener base URL based, on the new settings
+	$in['shortener_base_url'] = wp_ozh_yourls_determine_base_url( $in );
+	
 	return $in;
 }
 

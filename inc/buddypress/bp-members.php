@@ -1,5 +1,18 @@
 <?php
 
+/**
+ * Create a shorturl for a BP member profile
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ *
+ * @param int $user_id The ID of the user whose profile should be the URL for the shorturl
+ * @param str $type 'pretty' if you want the shorturl slug to be created from the user's nicename,
+ *   or from the $keyword param. Otherwise 'normal' will create a randomly generated URL, as per
+ *   the service's API. Note that $type and $keyword only do anything with YOURLS (not bit.ly, etc)
+ * @param str $keyword The desired 'keyword' or slug of the shorturl. Note that this param is
+ *   ignored if $type is not set to 'pretty'. Defaults to the user's user_login if $type == 'pretty'
+ */
 function wp_ozh_yourls_create_bp_member_url( $user_id, $type = 'normal', $keyword = false ) {
 	
 	// Check plugin is configured
@@ -39,6 +52,12 @@ function wp_ozh_yourls_create_bp_member_url( $user_id, $type = 'normal', $keywor
 	return $shorturl;
 }
 
+/**
+ * Outputs the displayed user's shorturl in the header
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ */
 function wp_ozh_yourls_display_user_url() {
 	$shorturl = wp_ozh_yourls_get_displayed_user_url();
 	
@@ -52,13 +71,27 @@ function wp_ozh_yourls_display_user_url() {
 }
 add_action( 'bp_before_member_header_meta', 'wp_ozh_yourls_display_user_url' );
 
+/**
+ * Echo the content of wp_ozh_yourls_get_displayed_user_url()
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ */
 function wp_ozh_yourls_displayed_user_url() {
 	echo wp_ozh_yourls_get_displayed_user_url();
 }
+	/**
+	 * Return the displayed user's shorturl
+	 *
+	 * @package YOURLS WordPress to Twitter
+	 * @since 1.5
+	 *
+	 * @return str $url The shorturt
+	 */
 	function wp_ozh_yourls_get_displayed_user_url() {
 		global $bp;
 		
-		$url = isset( $bp->displayed_user->shorturl ) ? $bp->displayed_user->shorturl : false;
+		$url = isset( $bp->displayed_user->shorturl ) ? $bp->displayed_user->shorturl : '';
 		
 		return $url;
 	}
@@ -136,18 +169,12 @@ function wp_ozh_yourls_render_user_edit_field() {
 	if ( !wp_ozh_user_can_edit_url() )
 		return;
 	
-	$ozh_yourls = get_option('ozh_yourls'); 
-	
-	if ( empty( $ozh_yourls['bp_shortener_base'] ) ) {
-		$ozh_yourls['bp_shortener_base'] = wp_ozh_yourls_guess_base_url();
-	}
-	
 	$shorturl_name = get_user_meta( bp_displayed_user_id(), 'yourls_shorturl_name', true );
 
 	?>
 	
 	<label for="shorturl"><?php _e( 'Short URL: ', 'wp-ozh-yourls' ) ?></label>
-	<code>http://<?php echo $ozh_yourls['bp_shortener_base'] ?>/</code><input type="text" name="shorturl" id="shorturl" value="<?php echo $shorturl_name ?>" class="settings-input" />
+	<code><?php wp_ozh_yourls_shortener_base_url() ?></code><input type="text" name="shorturl" id="shorturl" value="<?php echo $shorturl_name ?>" class="settings-input" />
 	
 	<?php
 }
@@ -199,14 +226,35 @@ function wp_ozh_yourls_save_user_edit() {
 }
 add_action( 'bp_core_general_settings_after_save', 'wp_ozh_yourls_save_user_edit' );
 
+/**
+ * Removes the 'source' parameter from remote YOURLS requests
+ *
+ * There is an exception hardcoded into YOURLS that will never allow multiple shorturls to be
+ * created for the same longurl, even if the YOURLS installation has set YOURLS_UNIQUE_URLS to
+ * false, if the API request comes from the source 'plugin'. That means that BP users will not
+ * be able to edit their auto-created shorturls. This filter removes the 'source' parameter as 
+ * a workaround.
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ *
+ * @param array $params The API params
+ * @return array $params The API params, less 'source'
+ */
 function wp_ozh_yourls_remote_allow_dupes( $params ) {	
 	$params['source'] = '';
 	
 	return $params;
 }
 
+
 /**
- * Figure out whether the logged-in user can edit the shorturl in question
+ * Can the current user edit the short URL of the currently viewed profile?
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ *
+ * @return bool
  */
 function wp_ozh_user_can_edit_url() {
 	// Some services do not allow for custom URLs

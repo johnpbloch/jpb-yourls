@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * Admin markup
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ */
 function wp_ozh_yourls_bp_admin_markup() {
 	$ozh_yourls = get_option('ozh_yourls'); 
 	

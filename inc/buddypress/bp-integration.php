@@ -3,12 +3,20 @@
 /**
  * BuddyPress functions for YOURLS
  */
- 
+
+// Require the Members integration 
 require_once( dirname( __FILE__ ) . '/bp-members.php' );
 
+// Require the admin functions
 if ( is_admin() )
 	require_once( dirname( __FILE__ ) . '/bp-admin.php' );
 
+/**
+ * Catch page requests, and fetch any shorturls that are called for by the current settings
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ */
 function wp_ozh_yourls_maybe_create_url() {
 	global $bp;
 	
