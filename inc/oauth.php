@@ -152,9 +152,9 @@ function wp_ozh_yourls_twitter_button_or_infos() {
 		
 		$unlink = add_query_arg( array('action' => 'unlink'), menu_page_url( 'ozh_yourls', false ) );
 		$unlink = wp_nonce_url( $unlink, 'unlink-yourls' );
+			
+		echo "<p>Reset Twitter info? <a href='$unlink' class='submitdelete' id='unlink-yourls'>Unlink</a> Twitter and your blog.</p>";
 	}
-	
-	echo "<p>Reset Twitter info? <a href='$unlink' class='submitdelete' id='unlink-yourls'>Unlink</a> Twitter and your blog.</p>";
 
 }
 

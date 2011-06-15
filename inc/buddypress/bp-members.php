@@ -21,7 +21,7 @@ function wp_ozh_yourls_create_bp_member_url( $user_id, $type = 'normal', $keywor
 		return 'Plugin not configured: cannot find which URL shortening service to use';
 	
 	// Mark this post as "I'm currently fetching the page to get its title"
-	if( $user_id ) {
+	if( $user_id && !get_user_meta( $user_id, 'yourls_shorturl', true ) ) {
 		update_user_meta( $user_id, 'yourls_fetching', 1 );
 		update_user_meta( $user_id, 'yourls_shorturl', '' ); // temporary empty title to avoid loop on creating short URL
 	}
@@ -46,14 +46,25 @@ function wp_ozh_yourls_create_bp_member_url( $user_id, $type = 'normal', $keywor
 		delete_user_meta( $user_id, 'yourls_fetching' );
 
 	// Store short URL in a custom field
-	if ( $user_id && $shorturl )
+	if ( $user_id && $shorturl ) {
 		update_user_meta( $user_id, 'yourls_shorturl', $shorturl );
+	
+		if ( $keyword )
+			update_user_meta( $user_id, 'yourls_shorturl_name', $keyword );
+	}
 
 	return $shorturl;
 }
 
 /**
  * Outputs the displayed user's shorturl in the header
+ *
+ * Don't like the way this looks? Put the following in your theme's functions.php:
+ *
+ *   remove_action( 'bp_before_member_header_meta', 'wp_ozh_yourls_display_user_url' );
+ *
+ * and then use the template tags wp_ozh_yourls_get_displayed_user_url() and
+ * wp_ozh_yourls_edit_link() to create your own markup in your theme.
  *
  * @package YOURLS WordPress to Twitter
  * @since 1.5
@@ -63,9 +74,9 @@ function wp_ozh_yourls_display_user_url() {
 	
 	if ( $shorturl ) {
 	?>
-		<div class="shorturl">
-			<?php printf( __( 'Short URL: %s', 'wp-ozh-yourls' ), $shorturl ) ?> <?php if ( wp_ozh_user_can_edit_url() ) : ?><?php wp_ozh_yourls_user_edit_link() ?><?php endif ?>
-		</div>
+		<span class="highlight shorturl">
+			<?php printf( __( 'Short URL: <code>%s</code>', 'wp-ozh-yourls' ), $shorturl ) ?> <?php if ( wp_ozh_user_can_edit_url() ) : ?>&nbsp;<?php wp_ozh_yourls_user_edit_link() ?><?php endif ?>
+		</span>
 	<?php
 	}
 }
@@ -175,6 +186,7 @@ function wp_ozh_yourls_render_user_edit_field() {
 	
 	<label for="shorturl"><?php _e( 'Short URL: ', 'wp-ozh-yourls' ) ?></label>
 	<code><?php wp_ozh_yourls_shortener_base_url() ?></code><input type="text" name="shorturl" id="shorturl" value="<?php echo $shorturl_name ?>" class="settings-input" />
+	<p class="description"><?php _e( 'Please note that YOURLS only supports a limited character set for short URLs. See <a href="http://yourls.org/#FAQ">the YOURLS FAQ</a> for more information on 32 vs 64 bit encoding.', 'wp-ozh-yourls' ) ?></p>
 	
 	<?php
 }
@@ -247,30 +259,4 @@ function wp_ozh_yourls_remote_allow_dupes( $params ) {
 	return $params;
 }
 
-
-/**
- * Can the current user edit the short URL of the currently viewed profile?
- *
- * @package YOURLS WordPress to Twitter
- * @since 1.5
- *
- * @return bool
- */
-function wp_ozh_user_can_edit_url() {
-	// Some services do not allow for custom URLs
-	if ( !wp_ozh_yourls_service_allows_custom_urls() )
-		return false;
-	
-	$ozh_yourls = get_option('ozh_yourls');
-
-	// Check to see whether the admin has allowed editing
-	if ( !isset( $ozh_yourls['bp_members_can_edit'] ) )
-		return false;
-
-	// Access control
-	if ( !is_super_admin() && !bp_is_my_profile() )
-		return false;
-
-	return true;
-}
 ?>
