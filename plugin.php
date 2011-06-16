@@ -115,6 +115,11 @@ function wp_ozh_yourls_geturl( $id ) {
 	return $short;
 }
 
+// Load the plugin's textdomain
+function wp_ozh_yourls_load_plugin_textdomain() {
+	load_plugin_textdomain( 'wp-ozh-yourls', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
+}
+
 // Load BuddyPress functions if BP is active
 function wp_ozh_yourls_load_bp_functions() {
 	require_once( dirname( __FILE__ ) . '/inc/buddypress/bp-integration.php' ); 
@@ -159,4 +164,7 @@ add_action('future_to_publish', 'wp_ozh_yourls_newpost', 10, 1);
 
 // Shortcut internal shortlink functions
 add_filter( 'pre_get_shortlink', 'wp_ozh_yourls_wp_get_shortlink', 10, 3 );
+
+// Load textdomain
+add_action( 'init', 'wp_ozh_yourls_load_plugin_textdomain' );
 

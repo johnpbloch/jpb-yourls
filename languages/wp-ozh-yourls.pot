@@ -1,0 +1,100 @@
+# Copyright (C) 2010 
+# This file is distributed under the same license as the  package.
+msgid ""
+msgstr ""
+"Project-Id-Version:  \n"
+"Report-Msgid-Bugs-To: http://wordpress.org/tag/yourls-wordpress-to-twitter\n"
+"POT-Creation-Date: 2011-06-16 15:50:57+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2010-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+
+#: inc/buddypress/bp-members.php:78 inc/buddypress/bp-groups.php:92
+msgid "Short URL: <code>%s</code>"
+msgstr ""
+
+#: inc/buddypress/bp-members.php:163 inc/buddypress/bp-groups.php:174
+msgid "Edit"
+msgstr ""
+
+#: inc/buddypress/bp-members.php:187 inc/buddypress/bp-groups.php:198
+msgid "Short URL: "
+msgstr ""
+
+#: inc/buddypress/bp-members.php:189 inc/buddypress/bp-groups.php:200
+msgid "Letters and numbers only."
+msgstr ""
+
+#: inc/buddypress/bp-members.php:223 inc/buddypress/bp-members.php:227
+#: inc/buddypress/bp-groups.php:236 inc/buddypress/bp-groups.php:240
+msgid "That URL is unavailable. Please choose another."
+msgstr ""
+
+#: inc/buddypress/bp-members.php:249 inc/buddypress/bp-groups.php:262
+msgid "That URL is unavailable. Please choose another.tt"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:30
+msgid "Members"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:35
+msgid "Each member gets a short URL"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:38
+msgid ""
+"Each short URL will be created automatically the next time the member "
+"profile is viewed"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:44
+msgid "Create short URLs from usernames"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:47
+msgid ""
+"When checked, member short URLs will look like <code>%s<strong>username</"
+"strong></code>, rather than a random string"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:52 inc/buddypress/bp-admin.php:85
+msgid "Users can edit their short URLs"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:55 inc/buddypress/bp-admin.php:88
+msgid ""
+"You must set <code>define( 'YOURLS_UNIQUE_URLS', false );</code> in <a href="
+"\"http://yourls.org/#Config\">your YOURLS configuration file."
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:63
+msgid "Groups"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:68
+msgid "Each group gets a short URL"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:71
+msgid ""
+"Each short URL will be created automatically the next time the group page is "
+"viewed"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:77
+msgid "Create short URLs from group slugs"
+msgstr ""
+
+#: inc/buddypress/bp-admin.php:80
+msgid ""
+"When checked, group short URLs will look like <code>%s<strong>group-name</"
+"strong></code>, rather than a random string"
+msgstr ""
+
+#: inc/options.php:436
+msgid "Save Changes"
+msgstr ""
