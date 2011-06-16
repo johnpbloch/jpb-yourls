@@ -519,6 +519,10 @@ function wp_ozh_yourls_tweet_on( $type ) {
 // Determine which service to use. Return string
 function wp_ozh_yourls_service() {
 	global $wp_ozh_yourls;
+	
+	if ( empty( $wp_ozh_yourls ) )
+		$wp_ozh_yourls = get_option( 'ozh_yourls' );
+	
 	if ( $wp_ozh_yourls['service'] == 'yourls' && $wp_ozh_yourls['location'] == 'local' )
 		return 'yourls-local';
 	
@@ -701,7 +705,7 @@ function wp_ozh_yourls_determine_base_url( $wp_ozh_yourls = false ) {
  */
 function wp_ozh_yourls_service_allows_custom_urls() {
 	$service = wp_ozh_yourls_service();
-	
+
 	$customizable = apply_filters( 'wp_ozh_yourls_customizable_services', array( 'yourls-remote', 'yourls-local' ) );
 	
 	return in_array( $service, $customizable );

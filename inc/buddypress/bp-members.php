@@ -160,7 +160,7 @@ function wp_ozh_yourls_user_edit_link( $user_id = false, $return = 'html' ) {
 	 	}
 	 	
 	 	// Create the URL to the settings page
-	 	$link = $domain . BP_SETTINGS_SLUG;
+	 	$link = $domain . BP_SETTINGS_SLUG . '/shorturl';
 	 	
 	 	// Add the markup if necessary
 	 	if ( 'html' == $return ) {
@@ -175,12 +175,47 @@ function wp_ozh_yourls_user_edit_link( $user_id = false, $return = 'html' ) {
  */
 
 /**
+ * Hook into bp_setup_nav and add our Settings submenu
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ */
+function wp_ozh_yourls_add_user_edit_tab() {
+	global $bp;
+	
+	$settings_link = $bp->displayed_user->domain . $bp->settings->slug . '/';
+	
+	bp_core_new_subnav_item( array( 'name' => __( 'Short URL', 'buddypress' ), 'slug' => 'shorturl', 'parent_url' => $settings_link, 'parent_slug' => $bp->settings->slug, 'screen_function' => 'wp_ozh_yourls_add_user_edit_field', 'position' => 10, 'user_has_access' => wp_ozh_user_can_edit_url() ) );
+}
+add_action( 'bp_setup_nav', 'wp_ozh_yourls_add_user_edit_tab' );
+
+/**
+ * Catch the form submit, and hook the function that renders the page
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ */
+function wp_ozh_yourls_add_user_edit_field() {
+	global $current_user;
+
+	if ( $_POST['submit'] ) {
+		wp_ozh_yourls_save_user_edit();
+	}
+
+	add_action( 'bp_template_content', 'wp_ozh_yourls_render_user_edit_field' );
+
+	bp_core_load_template( apply_filters( 'bp_core_template_plugin', 'members/single/plugins' ) );
+}
+
+/**
  * Renders the Edit field on the General Settings page
  *
  * @package YOURLS WordPress to Twitter
  * @since 1.5
  */
 function wp_ozh_yourls_render_user_edit_field() {
+	global $bp_settings_updated;
+	
 	if ( !wp_ozh_user_can_edit_url() )
 		return;
 	
@@ -188,13 +223,29 @@ function wp_ozh_yourls_render_user_edit_field() {
 
 	?>
 	
-	<label for="shorturl"><?php _e( 'Short URL: ', 'wp-ozh-yourls' ) ?></label>
-	<code><?php wp_ozh_yourls_shortener_base_url() ?></code><input type="text" name="shorturl" id="shorturl" value="<?php echo $shorturl_name ?>" class="settings-input" />
-	<p class="description"><?php _e( 'Letters and numbers only.', 'wp-ozh-yourls' ) ?></p>
+	<?php if ( $bp_settings_updated ) { ?>
+		<div id="message" class="updated fade">
+			<p><?php _e( 'Changes Saved.', 'buddypress' ) ?></p>
+		</div>
+	<?php } ?>
+
+	<form action="<?php echo $bp->loggedin_user->domain . BP_SETTINGS_SLUG . '/shorturl' ?>" method="post" id="settings-form" class="standard-form">
+		<h3><?php _e( 'Short URL', 'buddypress' ) ?></h3>
+		
+		<label for="shorturl"><?php _e( 'Short URL: ', 'wp-ozh-yourls' ) ?></label>
+		<code><?php wp_ozh_yourls_shortener_base_url() ?></code><input type="text" name="shorturl" id="shorturl" value="<?php echo $shorturl_name ?>" class="settings-input" />
+		<p class="description"><?php _e( 'Letters and numbers only.', 'wp-ozh-yourls' ) ?></p>
+	
+		<div class="submit">
+			<input type="submit" name="submit" value="<?php _e( 'Save Changes', 'buddypress' ) ?>" id="submit" class="auto" />
+		</div>
+
+		<?php wp_nonce_field( 'bp_settings_shorturl' ) ?>
+
+	</form>
 	
 	<?php
 }
-add_action( 'bp_core_general_settings_before_submit', 'wp_ozh_yourls_render_user_edit_field' );
 
 /**
  * Processes shorturl edits by the member and displays proper success/error messages
@@ -203,17 +254,23 @@ add_action( 'bp_core_general_settings_before_submit', 'wp_ozh_yourls_render_user
  * @since 1.5
  */
 function wp_ozh_yourls_save_user_edit() {
-	global $bp;
+	global $bp, $bp_settings_updated;
 	
 	if ( isset( $_POST['shorturl'] ) ) {
-		$user_id = bp_displayed_user_id();
+		check_admin_referer( 'bp_settings_shorturl' );
 		
+		$user_id = bp_displayed_user_id();
+	
+		$bp_settings_updated = false;
+	
 		$shorturl_name = wp_ozh_yourls_sanitize_slug( untrailingslashit( trim( $_POST['shorturl'] ) ) );
 		
 		// No need to continue if the name is unchanged
 		if ( $current_shorturl_name = get_user_meta( $user_id, 'yourls_shorturl_name', true ) ) {
-			if ( $current_shorturl_name == $shorturl_name )
+			if ( $current_shorturl_name == $shorturl_name ) {
+				$bp_settings_updated = true;
 				return;
+			}
 		}
 		
 		// Check first to see if the requested shorturl_name has previously belonged to the
@@ -256,6 +313,8 @@ function wp_ozh_yourls_save_user_edit() {
 			if ( $shorturl ) {
 				update_user_meta( $user_id, 'yourls_shorturl', $shorturl );
 				update_user_meta( $user_id, 'yourls_shorturl_name', $shorturl_name );
+				
+				$bp_settings_updated = true;
 				
 				// Just in case this needs to be refreshed
 				$bp->displayed_user->shorturl = $shorturl;

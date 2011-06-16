@@ -88,7 +88,7 @@ function wp_ozh_user_can_edit_url() {
 	}
 	
 	// Members component
-	if ( bp_is_user() ) {		
+	if ( bp_displayed_user_id() ) {		
 		// Check to see whether the admin has allowed editing
 		if ( !isset( $ozh_yourls['bp_members_can_edit'] ) )
 			return false;
@@ -186,7 +186,7 @@ function wp_ozh_yourls_bp_slug_is_available( $slug, $item_id ) {
  */
 function wp_ozh_yoruls_print_bp_styles() {
 	
-	if ( !bp_is_group() && !bp_is_user() )
+	if ( !bp_is_group() && !bp_displayed_user_id() )
 		return;
 		
 	?>
