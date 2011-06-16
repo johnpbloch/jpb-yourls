@@ -29,9 +29,11 @@ function wp_ozh_yourls_maybe_create_url() {
 	// Members
 	if ( isset( $ozh_yourls['bp_members'] ) ) {
 		if ( $user_id = bp_displayed_user_id() ) {
+			$shorturl = get_user_meta( $user_id, 'yourls_shorturl', true );
+			
 			// Check to see whether it's already created
-			if ( $shorturl = get_user_meta( $user_id, 'yourls_shorturl', true ) ) {
-				$bp->displayed_user->shorturl = $shorturl;	
+			if ( trim( $shorturl ) ) {
+				$bp->displayed_user->shorturl = trim( $shorturl );	
 			} else {	
 				$type = isset( $ozh_yourls['bp_members_pretty'] ) ? 'pretty' : false;
 				
@@ -45,8 +47,10 @@ function wp_ozh_yourls_maybe_create_url() {
 	if ( isset( $ozh_yourls['bp_groups'] ) ) {
 		if ( bp_is_group() ) {
 			// Check to see whether it's already created
-			if ( $shorturl = groups_get_groupmeta( $bp->groups->current_group->id, 'yourls_shorturl' ) ) {
-				$bp->groups->current_group->shorturl = $shorturl;
+			$shorturl = groups_get_groupmeta( $bp->groups->current_group->id, 'yourls_shorturl' );
+			
+			if ( trim( $shorturl ) ) {
+				$bp->groups->current_group->shorturl = trim( $shorturl );
 			} else {
 				$ozh_yourls = get_option( 'ozh_yourls' ); 
 				$type = isset( $ozh_yourls['bp_groups_pretty'] ) ? 'pretty' : false;

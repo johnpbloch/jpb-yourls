@@ -52,8 +52,11 @@ function wp_ozh_yourls_create_bp_group_url( $group_id, $type = 'normal', $keywor
 		$keyword = false;
 	}
 	
-	// Get short URL
+	// Remove the limitation on duplicate shorturls
+	// This is a temporary workaround
+	add_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
 	$shorturl = wp_ozh_yourls_api_call( $service, $url, $keyword, $title );
+	remove_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
 	
 	// Remove fetching flag
 	if( $group_id )
@@ -227,6 +230,7 @@ function wp_ozh_yourls_save_group_edit( $group_id ) {
 		// Check first to see if the requested shorturl_name has previously belonged to the
 		// group
 		$expand = wp_ozh_yourls_api_call_expand( wp_ozh_yourls_service(), $shorturl_name );
+		$expand = (array)$expand;
 		$group = new BP_Groups_Group( $group_id );
 		
 		$url_belongs_to_group = !empty( $expand['longurl'] ) && $expand['longurl'] == bp_get_group_permalink( $group );

@@ -39,7 +39,11 @@ function wp_ozh_yourls_create_bp_member_url( $user_id, $type = 'normal', $keywor
 	}
 	
 	// Get short URL
+	// Remove the limitation on duplicate shorturls
+	// This is a temporary workaround
+	add_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
 	$shorturl = wp_ozh_yourls_api_call( $service, $url, $keyword, $title );
+	remove_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
 	
 	// Remove fetching flag
 	if( $user_id )
@@ -215,6 +219,7 @@ function wp_ozh_yourls_save_user_edit() {
 		// Check first to see if the requested shorturl_name has previously belonged to the
 		// user
 		$expand = wp_ozh_yourls_api_call_expand( wp_ozh_yourls_service(), $shorturl_name );
+		$expand = (array)$expand;
 		
 		$url_belongs_to_user = !empty( $expand['longurl'] ) && $expand['longurl'] == $bp->displayed_user->domain;
 		
@@ -231,7 +236,6 @@ function wp_ozh_yourls_save_user_edit() {
 			if ( !$url_belongs_to_user ) {
 				// Remove the limitation on duplicate shorturls
 				// This is a temporary workaround
-				define( 'YOURLS_UNIQUE_URLS', false );
 				add_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
 				
 				// Try to create the URL
