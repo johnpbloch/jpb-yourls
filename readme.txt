@@ -6,13 +6,15 @@ Requires at least: 3.0
 Tested up to: 9.9
 Stable tag: 1.4.9
 
-Use YOURLS (a free GPL URL shortener service) or another public service (tinyURL...) to create short URL of your posts and tweet them
+Use YOURLS (a free GPL URL shortener service) or another public service (tinyURL...) to create short URLs of your posts and tweet them, or to create short URLs for your BuddyPress groups and users
 
 == Description ==
 
 [YOURLS](http://yourls.org/ "Your Own URL Shortener") is a free URL shortener service you can run on your webhost to have your own personal TinyURL.
 
 This plugin is a bridge between [YOURLS](http://yourls.org/ "Your Own URL Shortener"), Twitter and your blog: when you'll submit a new post or page, your blog will tap into YOURLS to generate a short URL for it, and will then tweet it.
+
+This plugin also features BuddyPress support. Short URLs can be generated automatically for each member and each group, and are customizable if permitted by the BuddyPress administrator.
 
 Requires PHP 5.
 
@@ -24,6 +26,10 @@ Note that, for maximum fun, this plugin also supports a few other public URL sho
 1. on the Write screen, you can (re)generate short URLs and (re)promote posts on Twitter
 
 == Changelog ==
+
+= 1.5 =
+* BuddyPress support added: members and groups URLs
+* A variety of PHP warnings cleared
 
 See plugin source or check the [SVN commit changelog](http://plugins.trac.wordpress.org/log/yourls-wordpress-to-twitter?verbose=on)
 
