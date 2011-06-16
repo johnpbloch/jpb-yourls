@@ -98,9 +98,10 @@ function wp_ozh_yourls_check_yourls() {
 		'supplemental' => array(
 			'location'  => $url,
 			'type'  => $_REQUEST['yourls_type'],
-			'req' => serialize( $request ),
-			'param' => $params,
+			'req' => !empty( $request ) ? serialize( $request ) : '',
+			'param' => !empty( $params ) ? $params : array( 'action' => 'stats' )
 		),
+		'action' => ''
 	) );
 	$x->send();
 	die('1');	
