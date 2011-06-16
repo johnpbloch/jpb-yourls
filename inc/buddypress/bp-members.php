@@ -186,7 +186,7 @@ function wp_ozh_yourls_render_user_edit_field() {
 	
 	<label for="shorturl"><?php _e( 'Short URL: ', 'wp-ozh-yourls' ) ?></label>
 	<code><?php wp_ozh_yourls_shortener_base_url() ?></code><input type="text" name="shorturl" id="shorturl" value="<?php echo $shorturl_name ?>" class="settings-input" />
-	<p class="description"><?php _e( 'Please note that YOURLS only supports a limited character set for short URLs. See <a href="http://yourls.org/#FAQ">the YOURLS FAQ</a> for more information on 32 vs 64 bit encoding.', 'wp-ozh-yourls' ) ?></p>
+	<p class="description"><?php _e( 'Letters and numbers only.', 'wp-ozh-yourls' ) ?></p>
 	
 	<?php
 }
@@ -202,37 +202,60 @@ function wp_ozh_yourls_save_user_edit() {
 	global $bp;
 	
 	if ( isset( $_POST['shorturl'] ) ) {
-		$shorturl_name = untrailingslashit( trim( $_POST['shorturl'] ) );
+		$user_id = bp_displayed_user_id();
 		
-		// Remove the limitation on duplicate shorturls
-		// This is a temporary workaround
-		define( 'YOURLS_UNIQUE_URLS', false );
-		add_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
+		$shorturl_name = wp_ozh_yourls_sanitize_slug( untrailingslashit( trim( $_POST['shorturl'] ) ) );
 		
-		// First, try to create a URL with this name
-		$shorturl = wp_ozh_yourls_create_bp_member_url( bp_displayed_user_id(), 'pretty', $shorturl_name );
-		
-		remove_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
-		
-		if ( !$shorturl ) {
-			// Something has gone wrong. Check to see whether this is a reversion to a
-			// previous shorturl
-			$expand = wp_ozh_yourls_api_call_expand( 'yourls-remote', $shorturl_name );
-			
-			if ( empty( $expand->longurl ) || $expand->longurl != $bp->displayed_user->domain ) {
-				// No match.
-				bp_core_add_message( __( 'That URL is unavailable. Please choose another.', 'wp-ozh-yourls' ), 'error' );
-			} else {
-				$shorturl = $expand->shorturl;
-			}
+		// No need to continue if the name is unchanged
+		if ( $current_shorturl_name = get_user_meta( $user_id, 'yourls_shorturl_name', true ) ) {
+			if ( $current_shorturl_name == $shorturl_name )
+				return;
 		}
 		
-		if ( $shorturl ) {
-			update_user_meta( bp_displayed_user_id(), 'yourls_shorturl', $shorturl );
-			update_user_meta( bp_displayed_user_id(), 'yourls_shorturl_name', $shorturl_name );
+		// Check first to see if the requested shorturl_name has previously belonged to the
+		// user
+		$expand = wp_ozh_yourls_api_call_expand( wp_ozh_yourls_service(), $shorturl_name );
+		
+		$url_belongs_to_user = !empty( $expand['longurl'] ) && $expand['longurl'] == $bp->displayed_user->domain;
+		
+		if ( !empty( $expand->longurl ) && !$url_belongs_to_user ) {
+			// This URL is already taken
+			bp_core_add_message( __( 'That URL is unavailable. Please choose another.', 'wp-ozh-yourls' ), 'error' );
+		} else if ( empty( $expand->longurl ) && !wp_ozh_yourls_bp_slug_is_available( $shorturl_name, $user_id ) ) {
+			// The URL is not yet taken, but it matches another group/user name, and
+			// we don't want it to get snatched
+			bp_core_add_message( __( 'That URL is unavailable. Please choose another.', 'wp-ozh-yourls' ), 'error' );	
+		} else {
+			// The URL appears to be available
+		
+			if ( !$url_belongs_to_user ) {
+				// Remove the limitation on duplicate shorturls
+				// This is a temporary workaround
+				define( 'YOURLS_UNIQUE_URLS', false );
+				add_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
+				
+				// Try to create the URL
+				$shorturl = wp_ozh_yourls_create_bp_group_url( $user_id, 'pretty', $shorturl_name );
+				
+				remove_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
+			} else {
+				// If the URL already belongs to the group, no need to create a
+				// new one
+				$shorturl = $expand['shorturl'];
+			}
 			
-			// Just in case this needs to be refreshed
-			$bp->displayed_user->shorturl = $shorturl;
+			if ( !$shorturl ) {
+				// Something has gone wrong. This URL must be off limits
+				bp_core_add_message( __( 'That URL is unavailable. Please choose another.tt', 'wp-ozh-yourls' ), 'error' );
+			}
+			
+			if ( $shorturl ) {
+				update_user_meta( $user_id, 'yourls_shorturl', $shorturl );
+				update_user_meta( $user_id, 'yourls_shorturl_name', $shorturl_name );
+				
+				// Just in case this needs to be refreshed
+				$bp->displayed_user->shorturl = $shorturl;
+			}
 		}
 	}
 }

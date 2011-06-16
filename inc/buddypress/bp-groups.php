@@ -197,7 +197,7 @@ function wp_ozh_yourls_render_group_edit_field() {
 	
 	<label for="shorturl"><?php _e( 'Short URL: ', 'wp-ozh-yourls' ) ?></label>
 	<code><?php wp_ozh_yourls_shortener_base_url() ?></code><input type="text" name="shorturl" id="shorturl" value="<?php echo $shorturl_name ?>" class="settings-input" />
-	<p class="description"><?php _e( 'Please note that YOURLS only supports a limited character set for short URLs. See <a href="http://yourls.org/#FAQ">the YOURLS FAQ</a> for more information on 32 vs 64 bit encoding.', 'wp-ozh-yourls' ) ?></p>
+	<p class="description"><?php _e( 'Letters and numbers only.', 'wp-ozh-yourls' ) ?></p>
 	
 	<hr />
 	<?php
@@ -209,42 +209,66 @@ add_action( 'bp_before_group_settings_admin', 'wp_ozh_yourls_render_group_edit_f
  *
  * @package YOURLS WordPress to Twitter
  * @since 1.5
+ *
+ * @param int $group_id Passed along by the groups_group_settings_edited hook
  */
 function wp_ozh_yourls_save_group_edit( $group_id ) {
 	global $bp;
 	
 	if ( isset( $_POST['shorturl'] ) ) {
-		$shorturl_name = untrailingslashit( trim( $_POST['shorturl'] ) );
+		$shorturl_name = wp_ozh_yourls_sanitize_slug( untrailingslashit( trim( $_POST['shorturl'] ) ) );
 		
-		// Remove the limitation on duplicate shorturls
-		// This is a temporary workaround
-		define( 'YOURLS_UNIQUE_URLS', false );
-		add_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
-		
-		// First, try to create a URL with this name
-		$shorturl = wp_ozh_yourls_create_bp_group_url( $group_id, 'pretty', $shorturl_name );
-		
-		remove_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
-		
-		if ( !$shorturl ) {
-			// Something has gone wrong. Check to see whether this is a reversion to a
-			// previous shorturl
-			$expand = wp_ozh_yourls_api_call_expand( 'yourls-remote', $shorturl_name );
-		
-			if ( empty( $expand->longurl ) || $expand->longurl != bp_get_group_permalink( $bp->groups->current_group ) ) {
-				// No match.
-				bp_core_add_message( __( 'That URL is unavailable. Please choose another.', 'wp-ozh-yourls' ), 'error' );
-			} else {
-				$shorturl = $expand->shorturl;
-			}
+		// No need to continue if the name is unchanged
+		if ( $current_shorturl_name = groups_get_groupmeta( $group_id, 'yourls_shorturl_name' ) ) {
+			if ( $current_shorturl_name == $shorturl_name )
+				return;
 		}
 		
-		if ( $shorturl ) {
-			groups_update_groupmeta( $group_id, 'yourls_shorturl', $shorturl );
-			groups_update_groupmeta( $group_id, 'yourls_shorturl_name', $shorturl_name );
+		// Check first to see if the requested shorturl_name has previously belonged to the
+		// group
+		$expand = wp_ozh_yourls_api_call_expand( wp_ozh_yourls_service(), $shorturl_name );
+		$group = new BP_Groups_Group( $group_id );
+		
+		$url_belongs_to_group = !empty( $expand['longurl'] ) && $expand['longurl'] == bp_get_group_permalink( $group );
+		
+		if ( !empty( $expand->longurl ) && !$url_belongs_to_group ) {
+			// This URL is already taken
+			bp_core_add_message( __( 'That URL is unavailable. Please choose another.', 'wp-ozh-yourls' ), 'error' );
+		} else if ( empty( $expand->longurl ) && !wp_ozh_yourls_bp_slug_is_available( $shorturl_name, $group_id ) ) {
+			// The URL is not yet taken, but it matches another group/user name, and
+			// we don't want it to get snatched
+			bp_core_add_message( __( 'That URL is unavailable. Please choose another.', 'wp-ozh-yourls' ), 'error' );	
+		} else {
+			// The URL appears to be available
+		
+			if ( !$url_belongs_to_group ) {
+				// Remove the limitation on duplicate shorturls
+				// This is a temporary workaround
+				define( 'YOURLS_UNIQUE_URLS', false );
+				add_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
+				
+				// Try to create the URL
+				$shorturl = wp_ozh_yourls_create_bp_group_url( $group_id, 'pretty', $shorturl_name );
+				
+				remove_filter( 'yourls_remote_params', 'wp_ozh_yourls_remote_allow_dupes' );
+			} else {
+				// If the URL already belongs to the group, no need to create a
+				// new one
+				$shorturl = $expand['shorturl'];
+			}
 			
-			// Just in case this needs to be refreshed
-			$bp->groups->current_group->shorturl = $shorturl;
+			if ( !$shorturl ) {
+				// Something has gone wrong. This URL must be off limits
+				bp_core_add_message( __( 'That URL is unavailable. Please choose another.tt', 'wp-ozh-yourls' ), 'error' );
+			}
+			
+			if ( $shorturl ) {
+				groups_update_groupmeta( $group_id, 'yourls_shorturl', $shorturl );
+				groups_update_groupmeta( $group_id, 'yourls_shorturl_name', $shorturl_name );
+				
+				// Just in case this needs to be refreshed
+				$bp->groups->current_group->shorturl = $shorturl;
+			}
 		}
 	}
 }

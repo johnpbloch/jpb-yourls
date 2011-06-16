@@ -98,6 +98,81 @@ function wp_ozh_user_can_edit_url() {
 }
 
 /**
+ * Check to see whether a given slug is available for a certain user or group
+ *
+ * Here's the logic behind this function. On existing installations of BuddyPress, group and user
+ * shorturls will be created gradually, as their pages are visited. This happens automatically, and
+ * will generally ensure unique shorturls. But if a user tries to request a custom shorturl, he
+ * should be prevented from taking the natural URL of a user or group whose shorturl has not been
+ * created yet. So this function is used to test whether or not the requested shorturl should be
+ * reserved for a user or group who has not yet had their shorturl created.
+ *
+ * There is some funny business involved here, regarding the issue of hyphens. BuddyPress slugs,
+ * especially for groups, often contain hyphens. Hyphens are not allowed by YOURLS, but WP doesn't
+ * know about that until after the URL is already created. In order to prevent someone from stealing
+ * the URL 'booneiscool' from the group 'boone-is-cool', therefore, we have to do a bit of funky
+ * regex on the groups and users databases, to see if there are any existing entities that might
+ * want that URL in the future.
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ *
+ * @param str $slug The slug being checked for availability
+ * @param int $item_id The group id, or the user id, of the slug requester
+ * @return bool Returns true if the slug is available
+ */
+function wp_ozh_yourls_bp_slug_is_available( $slug, $item_id ) {
+	global $wpdb, $bp;
+	
+	/**
+	 * The easy cases first: exact matches
+	 */
+	 
+	// Groups: is there a group with this exact slug, which is not the requester?
+	$group_id = BP_Groups_Group::group_exists( $slug );
+	if ( !empty( $group_id ) && $item_id != $group_id )
+		return false;
+	
+	// Members: is there a member with this exact username, which is not the requester?
+	$user_id = username_exists( $slug );
+	if ( !empty( $user_id ) && $item_id != $user_id )
+		return false;
+	
+	/**
+	 * The hard cases: stripping hyphens
+	 */
+	
+	// We'll make a regex with optional hyphens between each letter
+	$slug_array = preg_split( '/-?/', $slug, -1, PREG_SPLIT_NO_EMPTY );
+	$regex = '-?';
+	
+	foreach( $slug_array as $letter ) {
+		$regex .= $letter . '-?';	
+	}
+
+	// Groups
+	$maybe_groups = $wpdb->get_results( $wpdb->prepare( "SELECT id, slug FROM {$bp->groups->table_name} WHERE slug RLIKE '" . like_escape( $regex ) . "'" ) );
+		
+	// If there are any matches other than the requesting item, this slug is unavailable
+	foreach( (array)$maybe_groups as $maybe_group ) {
+		if ( $item_id != $maybe_group->id )
+			return false;		
+	}
+	
+	// Members
+	$maybe_users = $wpdb->get_results( $wpdb->prepare( "SELECT ID, user_login FROM {$wpdb->users} WHERE user_login RLIKE '" . like_escape( $regex ) . "'" ) );
+		
+	// If there are any matches other than the requesting item, this slug is unavailable
+	foreach( (array)$maybe_users as $maybe_user ) {
+		if ( $item_id != $maybe_user->id )
+			return false;		
+	}
+	
+	// If we've gotten here, then the slug is available. Phew!
+	return true;
+}
+
+/**
  * Print styles to the head of the document
  *
  * Hooked to wp_head to save an HTTP request. So sue me.

@@ -320,24 +320,19 @@ function wp_ozh_yourls_api_call_expand( $api, $url ) {
 	switch( $api ) {
 
 		case 'yourls-local':
-			global $yourls_reserved_URL;
-			if( !defined('YOURLS_FLOOD_DELAY_SECONDS') )
-				define('YOURLS_FLOOD_DELAY_SECONDS', 0); // Disable flood check
-			if( !defined('YOURLS_UNIQUE_URLS') && ( !defined('YOURLS_ALWAYS_FRESH') || YOURLS_ALWAYS_FRESH != true ) )
-				define('YOURLS_UNIQUE_URLS', true); // Don't duplicate long URLs
-
 			$include = wp_ozh_yourls_find_yourls_loader();
 			if( !$include ) {
 				add_action( 'admin_notices', create_function('', 'echo \'<div id="message" class="error"><p>Cannot find YOURLS. Please check your config.</p></div>\';') );
 				break;
 			}
 			
-			global $ydb;
 			require_once( $include ); 
-			$yourls_result = yourls_add_new_link( $url, $keyword, $title );
+			$yourls_result = yourls_api_expand( $url );
 
-			if ($yourls_result)
-				$shorturl = $yourls_result['shorturl'];
+			if ( $yourls_result )
+				return $yourls_result;
+			else
+				return false;
 			break;
 			
 		case 'yourls-remote':
@@ -710,3 +705,49 @@ function wp_ozh_yourls_service_allows_custom_urls() {
 	
 	return in_array( $service, $customizable );
 }
+
+/**
+ * Get a sanitized version of a BP/WP slug
+ *
+ * YOURLS only allows a limited character set for shorturls. This function attempts to reduce the
+ * provided slug to a keyword containing only legal characters. In the case of a local YOURLS
+ * installation, this happens by using YOURLS's own yourls_sanitize_string() function. Otherwise,
+ * we make a guess that the remote YOURLS installation uses 36-bit encoding, and sanitize based on
+ * that guess.
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ *
+ * @param str $slug The slug you want sanitized
+ * @return str $sanitized The sanitized slug
+ */
+function wp_ozh_yourls_sanitize_slug( $slug ) {
+	$service = wp_ozh_yourls_service();
+	
+	switch ( $service ) {
+		case 'yourls-local' :
+			// Bootstrap YOURLS and use its function to sanitize
+			$include = wp_ozh_yourls_find_yourls_loader();
+			if ( $include ) {
+				require_once( $include );
+				$sanitized = yourls_sanitize_string( $slug );
+				
+				// Putting the break here means that we can use the fallback
+				// method when YOURLS cannot be found or loaded
+				break;
+			}
+		
+		default :
+			// On remote requests, we have to make a guess about encoding. 36 is
+			// probably more common. This method is basically torn right out of YOURLS
+			$charset = '0123456789abcdefghijklmnopqrstuvwxyz';
+			$pattern = preg_quote( $charset, '-' );
+			$sanitized = substr(preg_replace('![^'.$pattern.']!', '', $slug ), 0, 199);
+			
+			break;
+	}
+	
+	return apply_filters( 'wp_ozh_yourls_sanitize_slug', $sanitized, $slug, $service );
+}
+
+?>
