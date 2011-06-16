@@ -2,7 +2,7 @@
 
 jQuery(document).ready(function($){
 
-	$('#div_h3_twitter, #div_h3_wordpress').css('display','none');
+	$('#div_h3_twitter, #div_h3_wordpress, #div_h3_buddypress').css('display','none');
 	
 	$('#advanced_template').css('display','none');
 	$('#toggle_advanced_template')

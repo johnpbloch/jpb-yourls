@@ -97,11 +97,13 @@ function wp_ozh_yourls_settings_are_ok( $check = 'overall' ) {
 	$check_yourls    = ( isset( $wp_ozh_yourls['service'] ) && !empty( $wp_ozh_yourls['service'] ) ? true : false );
 	$check_wordpress = ( isset( $wp_ozh_yourls['twitter_message'] ) && !empty( $wp_ozh_yourls['twitter_message'] ) ? true : false );
 	
+	$check_buddypress = true; // We don't really care if BP is set up
+	
 	if( $check == 'overall' ) {
 		$overall = $check_twitter && $check_yourls && $check_wordpress ;
 		return $overall;
 	} else {
-		return array( 'check_yourls' => $check_yourls, 'check_twitter' => $check_twitter, 'check_wordpress' => $check_wordpress );
+		return array( 'check_yourls' => $check_yourls, 'check_twitter' => $check_twitter, 'check_wordpress' => $check_wordpress, 'check_buddypress' => $check_buddypress );
 	}
 }
 
