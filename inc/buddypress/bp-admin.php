@@ -7,6 +7,14 @@
  * @since 1.5
  */
 function wp_ozh_yourls_bp_admin_markup() {
+	// Don't show this to anyone but the super admin
+	if ( !is_super_admin() )
+		return;
+	
+	// Don't show this on blogs other than the root blog
+	if ( BP_ROOT_BLOG != get_current_blog_id() )
+		return;
+	
 	$ozh_yourls = get_option('ozh_yourls'); 
 	
 	$can_customize = wp_ozh_yourls_service_allows_custom_urls();
