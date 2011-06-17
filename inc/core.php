@@ -20,7 +20,7 @@ function wp_ozh_yourls_promote() {
 	
 	if ( !isset($sent->error) ) {
 		$account = wp_ozh_yourls_get_twitter_screen_name();
-		$result = sprintf( __( "Success! Post was promoted on <a href='http://twitter.com/$1%s'>%2$s</a>!", 'wp-ozh-yourls' ), $account, $account );
+		$result = sprintf( __( "Success! Post was promoted on <a href='http://twitter.com/%1$s'>%2$s</a>!", 'wp-ozh-yourls' ), $account, $account );
 		update_post_meta($post_id, 'yourls_tweeted', 1);
 	} else {
 		$result = $sent->error;
