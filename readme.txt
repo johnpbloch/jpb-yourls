@@ -29,6 +29,7 @@ Note that, for maximum fun, this plugin also supports a few other public URL sho
 
 = 1.5 =
 * BuddyPress support added: members and groups URLs
+* Localization support added
 * A variety of PHP warnings cleared
 
 See plugin source or check the [SVN commit changelog](http://plugins.trac.wordpress.org/log/yourls-wordpress-to-twitter?verbose=on)
