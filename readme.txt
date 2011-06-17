@@ -4,7 +4,7 @@ Donate link: http://planetozh.com/exit/donate
 Tags: ozh, twitter, yourls, tinyurl, isgd, is.gd, bitly, bit.ly, short url, url shortener, oauth, buddypress
 Requires at least: 3.0
 Tested up to: 9.9
-Stable tag: 1.4.9
+Stable tag: 1.5
 
 Use YOURLS (a free GPL URL shortener service) or another public service (tinyURL...) to create short URLs of your posts and tweet them, or to create short URLs for your BuddyPress groups and users
 
@@ -26,11 +26,6 @@ Note that, for maximum fun, this plugin also supports a few other public URL sho
 1. on the Write screen, you can (re)generate short URLs and (re)promote posts on Twitter
 
 == Changelog ==
-
-= 1.5 =
-* BuddyPress support added: members and groups URLs
-* Localization support added
-* A variety of PHP warnings cleared
 
 See plugin source or check the [SVN commit changelog](http://plugins.trac.wordpress.org/log/yourls-wordpress-to-twitter?verbose=on)
 
