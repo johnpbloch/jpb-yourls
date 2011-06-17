@@ -20,7 +20,7 @@ function wp_ozh_yourls_promote() {
 	
 	if ( !isset($sent->error) ) {
 		$account = wp_ozh_yourls_get_twitter_screen_name();
-		$result = "Success! Post was promoted on <a href='http://twitter.com/$account'>@$account</a>!";
+		$result = sprintf( __( "Success! Post was promoted on <a href='http://twitter.com/$1%s'>%2$s</a>!", 'wp-ozh-yourls' ), $account, $account );
 		update_post_meta($post_id, 'yourls_tweeted', 1);
 	} else {
 		$result = $sent->error;
@@ -42,10 +42,10 @@ function wp_ozh_yourls_reset_url() {
 	$shorturl = wp_ozh_yourls_geturl( $post_id );
 
 	if ( $shorturl ) {
-		$result = "New short URL generated: <a href='$shorturl'>$shorturl</a>";
+		$result = sprintf( __( "New short URL generated: <a href='%1$s'>%2$s</a>", 'wp-ozh-yourls' ), $shorturl, $shorturl );
 		update_post_meta($post_id, 'yourls_shorturl', $shorturl);
 	} else {
-		$result = "Bleh. Could not generate short URL. Maybe the URL shortening service is down? Please try again later!";
+		$result = __( "Bleh. Could not generate short URL. Maybe the URL shortening service is down? Please try again later!", 'wp-ozh-yourls' );
 	}
 	$x = new WP_AJAX_Response( array(
 		'data' => $result,
@@ -65,7 +65,7 @@ function wp_ozh_yourls_check_yourls() {
 	switch( $_REQUEST['yourls_type'] ) {
 		case 'path':
 			$url = $_REQUEST['location'];
-			$result = wp_ozh_yourls_find_yourls_loader( $url ) ? 'OK !' : 'Not found';
+			$result = wp_ozh_yourls_find_yourls_loader( $url ) ? __( 'OK !', 'wp-ozh-yourls' ) : __( 'Not found', 'wp-ozh-yourls' );
 			break;
 		
 		case 'url':
@@ -171,7 +171,7 @@ function wp_ozh_yourls_get_new_short_url( $url, $post_id = 0, $keyword = '', $ti
 	// Check plugin is configured
 	$service = wp_ozh_yourls_service();
 	if( !$service )
-		return 'Plugin not configured: cannot find which URL shortening service to use';
+		return __( 'Plugin not configured: cannot find which URL shortening service to use', 'wp-ozh-yourls' );
 
 	// Mark this post as "I'm currently fetching the page to get its title"
 	if( $post_id ) {
@@ -215,6 +215,16 @@ function wp_ozh_yourls_find_yourls_loader( $path = '' ) {
 	return $path;
 }
 
+function wp_ozh_yourls_not_found_error() {
+	?>
+	
+	<div id="message" class="error">
+		<p><?php _e( 'Cannot find YOURLS. Please check your config.', 'wp-ozh-yourls' ) ?></p>
+	</div>
+	
+	<?php
+}
+
 // Tap into one of the available APIs. Return a short URL or false if error
 function wp_ozh_yourls_api_call( $api, $url, $keyword = '', $title = '' ) {
 	global $wp_ozh_yourls;
@@ -232,7 +242,7 @@ function wp_ozh_yourls_api_call( $api, $url, $keyword = '', $title = '' ) {
 
 			$include = wp_ozh_yourls_find_yourls_loader();
 			if( !$include ) {
-				add_action( 'admin_notices', create_function('', 'echo \'<div id="message" class="error"><p>Cannot find YOURLS. Please check your config.</p></div>\';') );
+				add_action( 'admin_notices', 'wp_ozh_yourls_not_found_error' );
 				break;
 			}
 			
@@ -323,7 +333,7 @@ function wp_ozh_yourls_api_call_expand( $api, $url ) {
 		case 'yourls-local':
 			$include = wp_ozh_yourls_find_yourls_loader();
 			if( !$include ) {
-				add_action( 'admin_notices', create_function('', 'echo \'<div id="message" class="error"><p>Cannot find YOURLS. Please check your config.</p></div>\';') );
+				add_action( 'admin_notices', 'wp_ozh_yourls_not_found_error' );
 				break;
 			}
 			

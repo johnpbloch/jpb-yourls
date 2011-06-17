@@ -47,6 +47,9 @@ Version: 1.4.9
  * 1.4.8:     Added: More actions and filters
  * 1.4.9:     Removed: JavaScript bits on the options page, causing passwords to reset
               Removed: Unneeded JSON class
+ * 1.5:	      Added: BuddyPress support (member and group URLs)
+ 	      Added: Localization support
+ 	      Fixed: A variety of PHP warnings
  */
 
 /********************* DO NOT EDIT *********************/
