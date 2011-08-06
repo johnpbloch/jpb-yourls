@@ -229,6 +229,9 @@ function wp_ozh_yourls_not_found_error() {
 function wp_ozh_yourls_api_call( $api, $url, $keyword = '', $title = '' ) {
 	global $wp_ozh_yourls;
 
+        if ( empty( $wp_ozh_yourls ) )
+		$wp_ozh_yourls = get_option( 'ozh_yourls' );
+
 	$shorturl = '';
 	
 	switch( $api ) {
@@ -328,6 +331,9 @@ function wp_ozh_yourls_api_call( $api, $url, $keyword = '', $title = '' ) {
 function wp_ozh_yourls_api_call_expand( $api, $url ) {
 	global $wp_ozh_yourls;
 
+        if ( empty( $wp_ozh_yourls ) )
+		$wp_ozh_yourls = get_option( 'ozh_yourls' );
+
 	switch( $api ) {
 
 		case 'yourls-local':
@@ -406,7 +412,10 @@ function wp_ozh_yourls_fetch_url( $url, $method='GET', $body=array(), $headers=a
 // Parse the tweet template and make a 140 char string
 function wp_ozh_yourls_maketweet( $url, $title, $id ) {
 	global $wp_ozh_yourls;
-	
+
+        if ( empty( $wp_ozh_yourls ) )
+		$wp_ozh_yourls = get_option( 'ozh_yourls' );
+
 	$tweet = $wp_ozh_yourls['twitter_message'];
 	
 	// Plugin author: interrupt here before everything is parsed
@@ -444,13 +453,13 @@ function wp_ozh_yourls_maketweet( $url, $title, $id ) {
 	// Get tags (up to 3)
 	$_tags = array_slice( (array)get_the_tags( $id ), 0, 3 );
 	$tags = array();
-	foreach( $_tags as $tag ) { $tags[] = strtolower( $tag->name ); }
+	foreach( $_tags as $tag ) { $tags[] = strtolower( str_replace( " ", "", $tag->name ) ); }
 	unset( $_tags );
 
 	// Get categories (up to 3)
 	$_cats = array_slice( (array)get_the_category( $id ), 0, 3 );
 	$cats = array();
-	foreach( $_cats as $cat ) { $cats[] = strtolower( $cat->name ); }
+	foreach( $_cats as $cat ) { $cats[] = strtolower( str_replace( " ", "", $cat->name ) ); }
 	unset( $_cats );
 
 	// Replace %L with tags as plaintext (space separated if more than one) (up to 3 tags)
@@ -517,12 +526,20 @@ function wp_ozh_yourls_admin_init() {
 // Generate on... $type = 'post' or 'page' or any custom post type, returns boolean
 function wp_ozh_yourls_generate_on( $type ) {
 	global $wp_ozh_yourls;
+
+        if ( empty( $wp_ozh_yourls ) )
+		$wp_ozh_yourls = get_option( 'ozh_yourls' );
+
 	return ( isset( $wp_ozh_yourls['generate_on_'.$type] ) && $wp_ozh_yourls['generate_on_'.$type] == 1 );
 }
 
 // Send tweet on... $type = 'post' or 'page' or any custom post type, returns boolean
 function wp_ozh_yourls_tweet_on( $type ) {
 	global $wp_ozh_yourls;
+
+        if ( empty( $wp_ozh_yourls ) )
+		$wp_ozh_yourls = get_option( 'ozh_yourls' );
+
 	return ( isset( $wp_ozh_yourls['tweet_on_'.$type] ) && $wp_ozh_yourls['tweet_on_'.$type] == 1 );
 }
 
