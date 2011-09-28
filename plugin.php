@@ -52,6 +52,7 @@ Version: 1.5.1
               Fixed: A variety of PHP warnings
  * 1.5.1:     Fixed: Remove spaces from tags & categories before making hashtags. Thanks Milan Petrovic!
               Fixed: Compatibility with P2 theme. Thanks Milan Petrovic!
+ * 1.5.2:     Added: Spanish translation. Thanks Katie!
  */
 
 /********************* DO NOT EDIT *********************/
@@ -80,7 +81,7 @@ function wp_ozh_yourls_head_linkrel() {
 	global $post;
 	$id = $post->ID;
 	$type = get_post_type( $id );
-	if( wp_ozh_yourls_generate_on( $type ) ) {	
+	if( wp_ozh_yourls_generate_on( $type ) ) {
 		$short = apply_filters( 'ozh_yourls_shorturl', wp_ozh_yourls_geturl( $id ) );
 		if ($short) {
 			$rel    = apply_filters( 'ozh_yourls_shorturl_linkrel', 'alternate shorturl shortlink' );
@@ -109,25 +110,25 @@ function wp_ozh_yourls_geturl( $id ) {
 	} else {
 		$short = get_post_meta( $id, 'yourls_shorturl', true );
 	}
-	
+
 	// short URL never was not created before? let's get it now!
 	if ( !$short && !is_preview() && !get_post_custom_values( 'yourls_fetching', $id) ) {
 		// Allow plugin to define custom keyword
 		$keyword = apply_filters( 'ozh_yourls_custom_keyword', '', $id );
 		$short = wp_ozh_yourls_get_new_short_url( get_permalink( $id ), $id, $keyword );
 	}
-	
+
 	return $short;
 }
 
 // Load the plugin's textdomain
 function wp_ozh_yourls_load_plugin_textdomain() {
-	load_plugin_textdomain( 'wp-ozh-yourls', false, dirname( plugin_basename( __FILE__ ) ) . '/languages/' );
+	load_plugin_textdomain( 'wp-ozh-yourls', false, 'yourls-wordpress-to-twitter/languages/' );
 }
 
 // Load BuddyPress functions if BP is active
 function wp_ozh_yourls_load_bp_functions() {
-	require_once( dirname( __FILE__ ) . '/inc/buddypress/bp-integration.php' ); 
+	require_once( dirname( __FILE__ ) . '/inc/buddypress/bp-integration.php' );
 }
 add_action( 'bp_include', 'wp_ozh_yourls_load_bp_functions' );
 
