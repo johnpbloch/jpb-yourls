@@ -52,7 +52,7 @@ Version: 1.5.2
               Fixed: A variety of PHP warnings
  * 1.5.1:     Fixed: Remove spaces from tags & categories before making hashtags. Thanks Milan Petrovic!
               Fixed: Compatibility with P2 theme. Thanks Milan Petrovic!
- * 1.5.2:     Added: Spanish translation. Thanks Katie!
+ * 1.5.2:     Added: Spanish translation. Thanks myhosting.com team!
  */
 
 /********************* DO NOT EDIT *********************/

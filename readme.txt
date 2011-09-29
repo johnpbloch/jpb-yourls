@@ -36,3 +36,6 @@ Installation is, as usual :
 1. Upload files to your `/wp-content/plugins/` directory (preserve sub-directory structure if applicable)
 1. Activate the plugin through the 'Plugins' menu in WordPress
 1. Refer to the official plugin page for documentation, usage and tips
+
+== Translations ==
+Spanish: myhosting.com team
