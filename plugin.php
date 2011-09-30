@@ -5,7 +5,7 @@ Plugin URI: http://planetozh.com/blog/my-projects/yourls-wordpress-to-twitter-a-
 Description: Create short URLs for posts with <a href="http://yourls.org/" title="Your Own URL Shortener">YOURLS</a> (or other services such as bit.ly) and tweet them.
 Author: Ozh
 Author URI: http:/ozh.org/
-Version: 1.5.2
+Version: 1.5.3
 */
 
 /* Release History :
@@ -53,6 +53,7 @@ Version: 1.5.2
  * 1.5.1:     Fixed: Remove spaces from tags & categories before making hashtags. Thanks Milan Petrovic!
               Fixed: Compatibility with P2 theme. Thanks Milan Petrovic!
  * 1.5.2:     Added: Spanish translation. Thanks myhosting.com team!
+ * 1.5.3:     Fixed: metaboxes now appear on custom post type pages
  */
 
 /********************* DO NOT EDIT *********************/

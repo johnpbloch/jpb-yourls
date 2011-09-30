@@ -452,10 +452,18 @@ function wp_ozh_yourls_do_page() {
 // Add meta boxes to post & page edit
 function wp_ozh_yourls_addbox() {
 	// What page are we on? (new Post, new Page, new custom post type?)
-	$post_type = isset( $_GET['post_type'] ) ? $_GET['post_type'] : 'post' ;
-	add_meta_box( 'yourlsdiv', 'YOURLS', 'wp_ozh_yourls_drawbox', $post_type, 'side', 'default' );
+	if( isset ( $_GET["post"] ) ) {
+		$post_id   = (int)$_GET["post"];
+		$post_type = get_post_type( $post_id );
+	} else {
+		$post_type = isset( $_GET['post_type'] ) ? $_GET['post_type'] : 'post' ;
+	}
 	
-	// TODO: do something with links. Or wait till they're considered custom post types.
+	if ( wp_ozh_yourls_generate_on( $post_type ) ) {
+		add_meta_box( 'yourlsdiv', 'YOURLS', 'wp_ozh_yourls_drawbox', $post_type, 'side', 'default' );
+	}
+	
+	// TODO: do something with links. Or wait till they're considered custom post types. Yeah, we'll wait.
 }
 
 
