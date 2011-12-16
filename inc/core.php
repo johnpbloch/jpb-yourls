@@ -389,7 +389,6 @@ function wp_ozh_yourls_remote_json( $url ) {
 	// TODO: some error handling ?
 }
 
-
 // Fetch a remote page. Input url, return content
 function wp_ozh_yourls_fetch_url( $url, $method='GET', $body=array(), $headers=array() ) {
 	if( !class_exists( 'WP_Http' ) )
@@ -408,7 +407,6 @@ function wp_ozh_yourls_fetch_url( $url, $method='GET', $body=array(), $headers=a
 	}
 }
 
-
 // Parse the tweet template and make a 140 char string
 function wp_ozh_yourls_maketweet( $url, $title, $id ) {
 	global $wp_ozh_yourls;
@@ -417,7 +415,7 @@ function wp_ozh_yourls_maketweet( $url, $title, $id ) {
 		$wp_ozh_yourls = get_option( 'ozh_yourls' );
 
 	$tweet = $wp_ozh_yourls['twitter_message'];
-	
+
 	// Plugin author: interrupt here before everything is parsed
 	$tweet = apply_filters( 'pre_ozh_yourls_tweet', $tweet, $url, $title, $id );
 
@@ -432,47 +430,85 @@ function wp_ozh_yourls_maketweet( $url, $title, $id ) {
 		}
 		unset( $matches );
 	}
-	
-	// Get author info
-	$post = get_post( $id );
-	$author_id = $post->post_author;
-	$author_info = get_userdata( $author_id );
-	unset( $post );
-	
-	// Replace %A{bleh} with author data 'bleh'
-	if( preg_match_all( '/%A\{([^\}]+)\}/', $tweet, $matches ) ) {
-		foreach( $matches[1] as $match ) {
-			$tweet = str_replace('%A{'.$match.'}', $author_info->$match, $tweet);
-		}
-		unset( $matches );
-	}
-	
-	// Replace %A with author display name
-	$tweet = str_replace('%A', $author_info->display_name, $tweet);
-	
-	// Get tags (up to 3)
-	$_tags = array_slice( (array)get_the_tags( $id ), 0, 3 );
-	$tags = array();
-	foreach( $_tags as $tag ) { $tags[] = strtolower( str_replace( " ", "", $tag->name ) ); }
-	unset( $_tags );
 
-	// Get categories (up to 3)
-	$_cats = array_slice( (array)get_the_category( $id ), 0, 3 );
-	$cats = array();
-	foreach( $_cats as $cat ) { $cats[] = strtolower( str_replace( " ", "", $cat->name ) ); }
-	unset( $_cats );
+        if (strpos($tweet, '%A') !== false) {
+            // Get author info
+            $post = get_post( $id );
+            $author_id = $post->post_author;
+            $author_info = get_userdata( $author_id );
+            unset( $post );
 
-	// Replace %L with tags as plaintext (space separated if more than one) (up to 3 tags)
-	$tweet = str_replace('%L', join(' ', $tags), $tweet);
-	
-	// Replace %H with tags as hashtags (space separated if more than one) (up to 3 tags) 
-	$tweet = str_replace('%H', '#'.join(' #', $tags), $tweet);
-	
-	// Replace %C with categories (space separated if more than one) (up to 3 categories) 
-	$tweet = str_replace('%C', join(' ', $cats), $tweet);
-	
-	// Replace %D with categories as hashtags (space separated if more than one) (up to 3 categories) 
-	$tweet = str_replace('%D', '#'.join(' #', $cats), $tweet);
+            // Replace %A{bleh} with author data 'bleh'
+            if( preg_match_all('/%A\{([^\}]+)\}/', $tweet, $matches)) {
+                foreach( $matches[1] as $match ) {
+                    $tweet = str_replace('%A{'.$match.'}', $author_info->$match, $tweet);
+                }
+                unset( $matches );
+            }
+
+            // Replace %A with author display name
+            $tweet = str_replace('%A', $author_info->display_name, $tweet);
+        }
+
+        if (strpos($tweet, '%X') !== false) {
+            if (preg_match_all('/%X\{([^\}]+)\}/', $tweet, $matches)) {
+                foreach ($matches[1] as $tax) {
+                    $_terms = array_slice((array)get_the_terms($id, $tax), 0, 3);
+                    $terms = array();
+                    foreach ($_terms as $term) {
+                        $terms[] = strtolower(str_replace(" ", "", $term->name));
+                    }
+                    unset($_terms);
+
+                    $tweet = str_replace('%X{'.$tax.'}', join(' ', $terms), $tweet);
+                }
+                unset($matches);
+            }
+        }
+
+        if (strpos($tweet, '%Y') !== false) {
+            if (preg_match_all('/%Y\{([^\}]+)\}/', $tweet, $matches)) {
+                foreach ($matches[1] as $tax) {
+                    $_terms = array_slice((array)get_the_terms($id, $tax), 0, 3);
+                    $terms = array();
+                    foreach ($_terms as $term) {
+                        $terms[] = strtolower(str_replace(" ", "", $term->name));
+                    }
+                    unset($_terms);
+
+                    $tweet = str_replace('%Y{'.$tax.'}', "#".join(' #', $terms), $tweet);
+                }
+                unset($matches);
+            }
+        }
+
+        if (strpos($tweet, '%L') !== false || strpos($tweet, '%H') !== false) {
+            // Get tags (up to 3)
+            $_tags = array_slice( (array)get_the_tags( $id ), 0, 3 );
+            $tags = array();
+            foreach( $_tags as $tag ) { $tags[] = strtolower( str_replace( " ", "", $tag->name ) ); }
+            unset( $_tags );
+
+            // Replace %L with tags as plaintext (space separated if more than one) (up to 3 tags)
+            $tweet = str_replace('%L', join(' ', $tags), $tweet);
+
+            // Replace %H with tags as hashtags (space separated if more than one) (up to 3 tags) 
+            $tweet = str_replace('%H', '#'.join(' #', $tags), $tweet);
+        }
+
+        if (strpos($tweet, '%C') !== false || strpos($tweet, '%D') !== false) {
+            // Get categories (up to 3)
+            $_cats = array_slice( (array)get_the_category( $id ), 0, 3 );
+            $cats = array();
+            foreach( $_cats as $cat ) { $cats[] = strtolower( str_replace( " ", "", $cat->name ) ); }
+            unset( $_cats );
+
+            // Replace %C with categories (space separated if more than one) (up to 3 categories) 
+            $tweet = str_replace('%C', join(' ', $cats), $tweet);
+
+            // Replace %D with categories as hashtags (space separated if more than one) (up to 3 categories) 
+            $tweet = str_replace('%D', '#'.join(' #', $cats), $tweet);
+        }
 
 	// Finally replace %T with as many chars as possible to keep under 140
 	$tweet = trim( $tweet );
@@ -618,28 +654,29 @@ function wp_ozh_yourls_pluginurl() {
 function wp_ozh_yourls_shortener_base_url() {
 	echo wp_ozh_yourls_get_shortener_base_url();
 }
-	/**
-	 * Gets the current shortener's base URL. Looks first in the saved settings, and if not
-	 * found there, calculates it based on the current service and
-	 * wp_ozh_yourls_determine_base_url()
-	 *
-	 * @package YOURLS WordPress to Twitter
-	 * @since 1.5
-	 *
-	 * @return str $url The base URL for the shortener (eg http://bit.ly)
-	 */
-	function wp_ozh_yourls_get_shortener_base_url() {
-		// Usually this will be stored in the settings
-		$wp_ozh_yourls = get_option( 'ozh_yourls' );
-		
-		if ( isset( $wp_ozh_yourls['shortener_base_url'] ) ) {
-			$url = $wp_ozh_yourls['shortener_base_url'];
-		} else {
-			$url = wp_ozh_yourls_determine_base_url();
-		}
-		
-		return $url;
-	}
+
+/**
+ * Gets the current shortener's base URL. Looks first in the saved settings, and if not
+ * found there, calculates it based on the current service and
+ * wp_ozh_yourls_determine_base_url()
+ *
+ * @package YOURLS WordPress to Twitter
+ * @since 1.5
+ *
+ * @return str $url The base URL for the shortener (eg http://bit.ly)
+ */
+function wp_ozh_yourls_get_shortener_base_url() {
+        // Usually this will be stored in the settings
+        $wp_ozh_yourls = get_option( 'ozh_yourls' );
+
+        if ( isset( $wp_ozh_yourls['shortener_base_url'] ) ) {
+                $url = $wp_ozh_yourls['shortener_base_url'];
+        } else {
+                $url = wp_ozh_yourls_determine_base_url();
+        }
+
+        return $url;
+}
 
 /**
  * Determine the base URL of the current URL shortening service

@@ -413,6 +413,8 @@ function wp_ozh_yourls_do_page() {
 			<li><b><tt>%A</tt></b>: <?php _e( 'author\'s display name', 'wp-ozh-yourls' ) ?></li>
 			<li><b><tt>%A{<?php _e( 'something', 'wp-ozh-yourls' ) ?>}</tt></b>: <?php _e( 'author\'s \'something\' as stored in the database. Example: %A{first_name}. See <a href="http://codex.wordpress.org/Function_Reference/get_userdata">get_userdata()</a>.', 'wp-ozh-yourls' ) ?></li>
 			<li><b><tt>%F{<?php _e( 'something', 'wp-ozh-yourls' ) ?>}</tt></b>: <?php _e( 'custom post field \'something\'. See <a href="http://codex.wordpress.org/Function_Reference/get_post_meta">get_post_meta()</a>.', 'wp-ozh-yourls' ) ?></li>
+			<li><b><tt>%X{<?php _e( 'taxonomy', 'wp-ozh-yourls' ) ?>}</tt></b>: <?php _e( 'terms as plaintext and lowercase for taxonomy. Example: %X{category} (space separated if more than one, up to 3 tags)', 'wp-ozh-yourls' ) ?></li>
+			<li><b><tt>%Y{<?php _e( 'taxonomy', 'wp-ozh-yourls' ) ?>}</tt></b>: <?php _e( 'terms as #hashtags and lowercase for taxonomy. Example: %Y{category} (space separated if more than one, up to 3 tags)', 'wp-ozh-yourls' ) ?></li>
 			<li><b><tt>%L</tt></b>: <?php _e( 'tags as plaintext and lowercase (space separated if more than one, up to 3 tags)', 'wp-ozh-yourls' ) ?></li>
 			<li><b><tt>%H</tt></b>: <?php _e( 'tags as #hashtags and lowercase (space separated if more than one, up to 3 tags)', 'wp-ozh-yourls' ) ?></li>
 			<li><b><tt>%C</tt></b>: <?php _e( 'categories as plaintext and lowercase (space separated if more than one, up to 3 categories)', 'wp-ozh-yourls' ) ?></li>
@@ -473,6 +475,8 @@ function wp_ozh_yourls_drawbox( $post ) {
 	$status = $post->post_status;
 	$id = $post->ID;
 	$title = $post->post_title;
+        $post_type = get_post_type_object($type);
+        $type_label = $post_type->labels->singular_name;
 	
 	$account = wp_ozh_yourls_get_twitter_screen_name();
 	
@@ -511,14 +515,14 @@ function wp_ozh_yourls_drawbox( $post ) {
 		return;
 	
 	$action = __( 'Tweet this', 'wp-ozh-yourls' );
-	$promote = sprintf( __( "Promote this $s", 'wp-ozh-yourls' ), $type );
+	$promote = sprintf( __( "Promote this %s", 'wp-ozh-yourls' ), $type_label );
 	$tweeted = get_post_meta( $id, 'yourls_tweeted', true );
 
 	echo '<p><strong>'.$promote.' on <a href="http://twitter.com/'.$account.'">@'.$account.'</a>: </strong></p>
 	<div id="yourls-promote">';
 	if ($tweeted) {
 		$action = __( 'Retweet this', 'wp-ozh-yourls' );
-		$promote = sprintf( __( "Promote this $s again", 'wp-ozh-yourls' ), $type );
+		$promote = sprintf( __( "Promote this %s again", 'wp-ozh-yourls' ), $type_label );
 		echo '<p>' . __( '<em>Note:</em> this post has already been tweeted. Not that there\'s something wrong to promote it again, of course :)', 'wp-ozh-yourls' ) . '</p>';
 	}
 	echo '<p><textarea id="yourls_tweet" rows="1" style="width:100%">'.wp_ozh_yourls_maketweet( $shorturl, $title, $id ).'</textarea></p>
