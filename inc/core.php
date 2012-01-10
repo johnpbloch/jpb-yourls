@@ -653,107 +653,12 @@ function wp_ozh_yourls_shortener_base_url() {
 	echo wp_ozh_yourls_get_shortener_base_url();
 }
 
-/**
- * Gets the current shortener's base URL. Looks first in the saved settings, and if not
- * found there, calculates it based on the current service and
- * wp_ozh_yourls_determine_base_url()
- *
- * @package YOURLS WordPress to Twitter
- * @since 1.5
- *
- * @return str $url The base URL for the shortener (eg http://bit.ly)
- */
 function wp_ozh_yourls_get_shortener_base_url() {
-	// Usually this will be stored in the settings
-	$wp_ozh_yourls = get_option( 'ozh_yourls' );
-
-	if( isset( $wp_ozh_yourls['shortener_base_url'] ) ) {
-		$url = $wp_ozh_yourls['shortener_base_url'];
-	} else {
-		$url = wp_ozh_yourls_determine_base_url();
-	}
-
-	return $url;
+	return WP_YOURLS::get_shortener_base_url();
 }
 
-/**
- * Determine the base URL of the current URL shortening service
- *
- * This function is called whenever the Dashboard options are saved, to account for changed URL
- * Shortener Settings.
- *
- * @package YOURLS WordPress to Twitter
- * @since 1.5
- *
- * @param array $wp_ozh_yourls (optional) When called during the process of saving options, this
- *   function takes the settings array being saved as an argument, and uses them to find the current
- *   service. This is necessary in order to catch a newly selected service in time. When this param
- *   is omitted, $service is set with wp_ozh_yourls_service()
- * @return $url The base URL of the shortener
- */
 function wp_ozh_yourls_determine_base_url( $wp_ozh_yourls = false ) {
-	if( $wp_ozh_yourls ) {
-		if( $wp_ozh_yourls['service'] == 'yourls' && $wp_ozh_yourls['location'] == 'local' )
-			$service = 'yourls-local';
-
-		if( $wp_ozh_yourls['service'] == 'yourls' && $wp_ozh_yourls['location'] == 'remote' )
-			$service = 'yourls-remote';
-
-		if( $wp_ozh_yourls['service'] == 'other' )
-			$service = $wp_ozh_yourls['other'];
-	} else {
-		$service = wp_ozh_yourls_service();
-	}
-
-	if( !$service )
-		return false;
-
-	$url = false;
-
-	switch( $service ) {
-		case 'yourls-local' :
-			// Load the YOURLS config file
-			$include = wp_ozh_yourls_find_yourls_loader();
-			if( $include )
-				require_once( $include );
-
-			if( defined( 'YOURLS_SITE' ) )
-				$url = YOURLS_SITE;
-
-			break;
-
-		case 'yourls-remote' :
-			if( !$wp_ozh_yourls )
-				$wp_ozh_yourls = get_option( 'ozh_yourls' );
-			$yourls_url = isset( $wp_ozh_yourls['yourls_url'] ) ? $wp_ozh_yourls['yourls_url'] : false;
-
-			if( $yourls_url ) {
-				$url = str_replace( 'yourls-api.php', '', $yourls_url );
-			}
-
-			break;
-
-		case 'bitly' :
-			$url = 'http://bit.ly';
-			break;
-
-		case 'tinyurl' :
-			$url = 'http://tinyurl.com';
-			break;
-
-		case 'isgd' :
-			$url = 'http://is.gd';
-			break;
-
-		default :
-			break;
-	}
-
-	if( $url ) {
-		$url = trailingslashit( $url );
-	}
-
-	return $url;
+	return WP_YOURLS::get_base_url( $wp_ozh_yourls );
 }
 
 function wp_ozh_yourls_service_allows_custom_urls() {
@@ -768,6 +673,7 @@ class WP_YOURLS {
 
 	protected static $service = '';
 	protected static $options = array( );
+	protected static $loadedYOURLS = false;
 
 	public static function init() {
 		static::$options = get_option( 'ozh_yourls', array( ) );
@@ -775,6 +681,91 @@ class WP_YOURLS {
 			static::$service = static::$options['location'] == 'local' ? 'yourls-local' : 'yourls-remote';
 		elseif( static::$options['service'] == 'other' )
 			static::$service = static::$options['other'];
+		if( defined( 'YOURLS_ABSPATH' ) )
+			static::$loadedYOURLS = true;
+	}
+
+	/**
+	 * Gets the current shortener's base URL. Looks first in the saved settings, and if not
+	 * found there, calculates it based on the current service and
+	 * wp_ozh_yourls_determine_base_url()
+	 *
+	 * @package YOURLS WordPress to Twitter
+	 * @since 1.5
+	 *
+	 * @return str $url The base URL for the shortener (eg http://bit.ly)
+	 */
+	public static function get_shortener_base_url() {
+		// Usually this will be stored in the settings
+		$wp_ozh_yourls = static::$options;
+		if( isset( $wp_ozh_yourls['shortener_base_url'] ) ) {
+			$url = $wp_ozh_yourls['shortener_base_url'];
+		} else {
+			$url = static::get_base_url();
+		}
+		return $url;
+	}
+
+	/**
+	 * Determine the base URL of the current URL shortening service
+	 *
+	 * This function is called whenever the Dashboard options are saved, to account for changed URL
+	 * Shortener Settings.
+	 *
+	 * @package YOURLS WordPress to Twitter
+	 * @since 1.5
+	 *
+	 * @param array $wp_ozh_yourls (optional) When called during the process of saving options, this
+	 *   function takes the settings array being saved as an argument, and uses them to find the current
+	 *   service. This is necessary in order to catch a newly selected service in time. When this param
+	 *   is omitted, $service is set with wp_ozh_yourls_service()
+	 * @return $url The base URL of the shortener
+	 */
+	public static function get_base_url( $wp_ozh_yourls = false ) {
+		if( $wp_ozh_yourls ) {
+			if( $wp_ozh_yourls['service'] == 'yourls' && $wp_ozh_yourls['location'] == 'local' )
+				$service = 'yourls-local';
+			if( $wp_ozh_yourls['service'] == 'yourls' && $wp_ozh_yourls['location'] == 'remote' )
+				$service = 'yourls-remote';
+			if( $wp_ozh_yourls['service'] == 'other' )
+				$service = $wp_ozh_yourls['other'];
+		} else {
+			$service = static::$service;
+		}
+		if( !$service )
+			return false;
+		$url = false;
+		switch( $service ) {
+			case 'yourls-local' :
+				// Load the YOURLS config file
+				static::load_yourls();
+				if( defined( 'YOURLS_SITE' ) )
+					$url = YOURLS_SITE;
+				break;
+			case 'yourls-remote' :
+				if( !$wp_ozh_yourls )
+					$wp_ozh_yourls = static::$options;
+				$yourls_url = isset( $wp_ozh_yourls['yourls_url'] ) ? $wp_ozh_yourls['yourls_url'] : false;
+				if( $yourls_url ) {
+					$url = str_replace( 'yourls-api.php', '', $yourls_url );
+				}
+				break;
+			case 'bitly' :
+				$url = 'http://bit.ly';
+				break;
+			case 'tinyurl' :
+				$url = 'http://tinyurl.com';
+				break;
+			case 'isgd' :
+				$url = 'http://is.gd';
+				break;
+			default :
+				break;
+		}
+		if( $url ) {
+			$url = trailingslashit( $url );
+		}
+		return $url;
 	}
 
 	/**
@@ -806,10 +797,8 @@ class WP_YOURLS {
 	 * @return str $sanitized The sanitized slug
 	 */
 	public static function sanitize_slug( $slug ) {
-		if( static::$service === 'yourls-local' && ( function_exists( 'yourls_sanitize_string' ) || $include = wp_ozh_yourls_find_yourls_loader() ) ) {
-			// Bootstrap YOURLS and use its function to sanitize
-			if( !function_exists( 'yourls_sanitize_string' ) )
-				require_once($include);
+		if( static::$service === 'yourls-local' ) {
+			static::load_yourls();
 			$sanitized = yourls_sanitize_string( $slug );
 		} else {
 			// On remote requests, we have to make a guess about encoding. 36 is
@@ -817,6 +806,19 @@ class WP_YOURLS {
 			$sanitized = substr( preg_replace( '![^0-9a-z]!', '', $slug ), 0, 199 );
 		}
 		return apply_filters( 'wp_ozh_yourls_sanitize_slug', $sanitized, $slug, static::$service );
+	}
+
+	public static function is_yourls_loaded() {
+		return (bool)static::$loadedYOURLS;
+	}
+
+	public static function load_yourls() {
+		if( static::$loadedYOURLS )
+			return true;
+		$from = wp_ozh_yourls_find_yourls_loader();
+		require( $from );
+		static::$loadedYOURLS = true;
+		return true;
 	}
 
 }
