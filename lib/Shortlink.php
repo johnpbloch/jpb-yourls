@@ -1,6 +1,6 @@
 <?php
 
-interface LibShortlink {
+interface Shortlink {
 
 	public static function shorten( $longURL, $desired );
 

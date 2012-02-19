@@ -1,6 +1,6 @@
 <?php
 
-class LibShortlinkIsGd implements LibShortlink {
+class ShortlinkIsGd implements Shortlink {
 
 	public static function shorten( $longURL, $desired = false ) {
 		return static::apiHelper( 'shorten', $longURL, $desired );
