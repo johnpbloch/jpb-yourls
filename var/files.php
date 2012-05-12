@@ -8,5 +8,6 @@ return array(
 		'ShortlinkYourlsRemote',
 		'JPB_Options',
 		'JBY_Options',
+		'JPB_Yourls'
 	),
 );
