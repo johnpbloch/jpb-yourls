@@ -3,19 +3,19 @@
 class ShortlinkIsGd implements Shortlink {
 
 	public static function shorten( $longURL, $desired = false ) {
-		return static::apiHelper( 'shorten', $longURL, $desired );
+		return self::apiHelper( 'shorten', $longURL, $desired );
 	}
 
 	public static function expand( $shortURL ) {
-		return static::apiHelper( 'expand', $shortURL );
+		return self::apiHelper( 'expand', $shortURL );
 	}
 
 	protected static function apiHelper( $action, $url, $desired = false ) {
 		$haveWeHitTheLimit = get_transient( '_jpb_shortlink_isgd_exceed' );
 		if($haveWeHitTheLimit)
 			return new WP_Error( 'is-gd-error-code-' . $haveWeHitTheLimit->errorcode, $haveWeHitTheLimit->errormessage );
-		$url = static::formatRequestURL( $action, $url, $desired );
-		$response = static::getResponse( $url );
+		$url = self::formatRequestURL( $action, $url, $desired );
+		$response = self::getResponse( $url );
 		if( is_wp_error( $response ) ) {
 			return $response;
 		} else {
