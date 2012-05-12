@@ -5,6 +5,7 @@ return array(
 		'Shortlink',
 		'ShortlinkIsGd',
 		'ShortlinkYourlsLocal',
+		'ShortlinkYourlsRemote',
 		'JPB_Options',
 		'JBY_Options',
 	),
