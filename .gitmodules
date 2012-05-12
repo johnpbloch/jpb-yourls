@@ -1,0 +1,3 @@
+[submodule "Tests/wordpress-tests"]
+	path = Tests/wordpress-tests
+	url = git://github.com/nb/wordpress-tests.git
