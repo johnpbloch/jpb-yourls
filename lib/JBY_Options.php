@@ -6,6 +6,7 @@ class JBY_Options extends JPB_Options
 	protected $_option_name = 'jpb-yourls-options';
 	public $shortlinkAPI = 'yourls';
 	public $shortlinkURI = '';
+	public $authentication = array();
 
 	/**
 	 * The singleton instance
