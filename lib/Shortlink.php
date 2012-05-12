@@ -1,6 +1,7 @@
 <?php
 
-interface Shortlink {
+interface Shortlink
+{
 
 	public static function shorten( $longURL, $desired );
 
