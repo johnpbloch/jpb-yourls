@@ -34,3 +34,5 @@ function jpb_shortlink_autoloader( $name )
 spl_autoload_register( 'jpb_shortlink_autoloader' );
 
 define( 'JPB_SHORTLINK_LIBRARY_AUTOLOADER', true );
+
+JPB_Yourls::bootstrap();
